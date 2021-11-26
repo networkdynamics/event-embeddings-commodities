@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import json
 import os
 
@@ -10,39 +11,66 @@ def main(args):
 
     # sites to search
     sites = [ 'apnews.com' ]
-        
+
+    # master node
+    master_url = 'k8s://https://10.140.16.25:6443'
+
+    # fetch google urls
+    google_source = source.Google(dev_key=args.dev_key, engine_id=args.engine_id)
+
+    collector = collect.Collector(google_source)
+
+    start_date = datetime.date(2021, 8, 1)
+    end_date = datetime.date(2021, 8, 31)
+    collector.set_date_range(start_date, end_date)
+
+    keywords = ['election', 'president', 'war', 'government', 'border']
+    keyword_urls = {}
+    for keyword in keywords:
+        collector.by_keywords([keyword])
+
+        google_articles = collector.fetch(sites=sites, max_articles=100, url_only=True, disable_news_heuristics=True)
+
+        keyword_urls[keyword] = set(article.source_url for article in google_articles)
+
     # fetch common crawl URLs
-    cc_source = source.CommonCrawl(master_url=args.master_url, sites=sites)
+    cc_source = source.CommonCrawl(master_url=master_url)
     
     collector = collect.Collector(cc_source)
-    cc_articles = collector.fetch(max_articles=100, url_only=True)
+
+    start_date = datetime.date(2021, 8, 1)
+    end_date = datetime.date(2021, 8, 31)
+    collector.set_date_range(start_date, end_date)
+
+    cc_articles = collector.fetch(sites=sites, max_articles=None, url_only=True, disable_news_heuristics=True)
 
     cc_urls = set(article.source_url for article in cc_articles)
 
-    # fetch google urls
-    google_source = source.Google(dev_key=args.dev_key, engine_id=args.engine_id, sites=sites)
-
-    collector = collect.Collector(google_source)
-    google_articles = collector.fetch(max_articles=100, url_only=True)
-
-    google_urls = set(article.source_url for article in google_articles)
-
     # find common urls
-    common_urls = google_urls.intersection(cc_urls)
+    url_data = {}
+    avg_num_in_common = 0
+    for keyword, urls in keyword_urls.items():
+        num_in_common = len(urls.intersection(cc_urls))
+        avg_num_in_common += num_in_common
+        url_data[keyword] = num_in_common
 
-    url_data = {
-        'cc_urls': cc_urls,
-        'google_urls': google_urls,
-        'common_urls': common_urls,
-        'num_common': len(common_urls)
-    }
+    url_data['avg_num_common'] = avg_num_in_common / len(keyword_urls)
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_path = os.path.join(this_dir_path, '..', 'data')
+
+    if not os.path.exists(data_path):
+        os.mkdir(data_path)
+    
     out_path = os.path.join(data_path, 'cc_coverage_data.json')
 
     with open(out_path, 'w') as f:
         json.dump(url_data, f)
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dev-key')
+    parser.add_argument('--engine-id')
+    args = parser.parse_args()
+
+    main(args)

@@ -1,4 +1,4 @@
-import argparse
+import datetime
 import json
 import os
 
@@ -6,16 +6,18 @@ from seldonite import source
 from seldonite import collect
 
 
-def main(args):
+def main():
 
     # sites to search
     sites = [ 'apnews.com', 'bbc.com', 'nytimes.com' ]
-        
-    # fetch common crawl URLs
-    cc_source = source.CommonCrawl(master_url=args.master_url, sites=sites)
     
+    # master node
+    master_url = 'k8s://https://10.140.16.25:6443'
+
+    # fetch common crawl URLs
+    cc_source = source.CommonCrawl(master_url=master_url, crawl='latest')
     collector = collect.Collector(cc_source)
-    cc_articles = collector.fetch(max_articles=None, url_only=True)
+    cc_articles = collector.fetch(sites=sites, max_articles=None, url_only=True, disable_news_heuristics=True)
 
     cc_urls = [article.source_url for article in cc_articles]
 
@@ -26,7 +28,11 @@ def main(args):
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_path = os.path.join(this_dir_path, '..', 'data')
-    out_path = os.path.join(data_path, 'cc_coverage_data.json')
+
+    if not os.path.exists(data_path):
+        os.mkdir(data_path)
+
+    out_path = os.path.join(data_path, 'cc_news_share_data.json')
 
     with open(out_path, 'w') as f:
         json.dump(url_data, f)
