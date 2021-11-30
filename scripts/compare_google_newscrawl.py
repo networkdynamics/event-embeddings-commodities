@@ -24,8 +24,8 @@ def main(args):
     end_date = datetime.date(2021, 8, 31)
     collector.set_date_range(start_date, end_date)
 
-    keywords = ['election']
-    #keywords = ['election', 'president', 'war', 'government', 'border']
+    #keywords = ['election']
+    keywords = ['election', 'president', 'war', 'government', 'border']
     keyword_urls = {}
     for keyword in keywords:
         cache_path = os.path.join('.', 'data', f'google_news_urls_{keyword}_aug_2021.json')
@@ -41,7 +41,7 @@ def main(args):
         keyword_urls[keyword] = set(article.source_url for article in google_articles)
 
         if not os.path.exists(cache_path):
-            with open(cache_path) as f:
+            with open(cache_path, 'w') as f:
                 json.dump(list(keyword_urls[keyword]), f)
 
     # fetch common crawl URLs
