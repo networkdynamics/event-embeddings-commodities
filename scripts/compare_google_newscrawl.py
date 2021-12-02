@@ -66,6 +66,7 @@ def main(args):
         url_data[keyword] = num_in_common
 
     url_data['avg_num_common'] = avg_num_in_common / len(keyword_urls)
+    url_data['num_cc_urls'] = len(cc_urls)
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_path = os.path.join(this_dir_path, '..', 'data')
