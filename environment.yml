@@ -1,0 +1,10 @@
+name: state_of_political_events
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  - pandas
+  - matplotlib
+  - pip
+  - pip:
+    - -e /home/ndg/users/bsteel2/repos/seldonite/.

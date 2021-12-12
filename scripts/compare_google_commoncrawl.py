@@ -22,7 +22,7 @@ def main(args):
 
     start_date = datetime.date(2021, 8, 1)
     end_date = datetime.date(2021, 8, 31)
-    collector.set_date_range(start_date, end_date)
+    collector.in_date_range(start_date, end_date)
 
     keywords = ['election', 'president', 'war', 'government', 'border']
     keyword_urls = {}
@@ -40,7 +40,7 @@ def main(args):
 
     start_date = datetime.date(2021, 8, 1)
     end_date = datetime.date(2021, 8, 31)
-    collector.set_date_range(start_date, end_date)
+    collector.in_date_range(start_date, end_date)
 
     cc_articles = collector.fetch(sites=sites, max_articles=None, url_only=True, disable_news_heuristics=True)
 
@@ -57,7 +57,7 @@ def main(args):
     url_data['avg_num_common'] = avg_num_in_common / len(keyword_urls)
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_path = os.path.join(this_dir_path, '..', 'data')
+    data_path = os.path.join(this_dir_path, '..', 'data', 'news_coverage')
 
     if not os.path.exists(data_path):
         os.mkdir(data_path)
