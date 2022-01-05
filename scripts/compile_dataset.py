@@ -5,7 +5,7 @@ from seldonite import collect, source
 from seldonite.helpers import utils
 
 def main():
-    master_url = 'k8s://https://10.140.16.25:6443'
+    master_url = 'k8s://kubernetes.default.svc'
     db_connection_string = os.environ['MONGO_CONNECTION_STRING']
     db_name = 'political_events'
     db_table = 'news'
