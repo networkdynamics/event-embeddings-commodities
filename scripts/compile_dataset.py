@@ -1,11 +1,12 @@
 import argparse
+import os
 
 from seldonite import collect, source
 from seldonite.helpers import utils
 
-def main(args):
+def main():
     master_url = 'k8s://https://10.140.16.25:6443'
-    db_connection_string = args.connectionstring
+    db_connection_string = os.environ['MONGO_CONNECTION_STRING']
     db_name = 'political_events'
     db_table = 'news'
     crawls = utils.get_all_cc_crawls()
@@ -23,7 +24,4 @@ def main(args):
         print(f"Finished pull for crawl: {crawl}")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--connectionstring')
-    args = parser.parse_args()
-    main(args)
+    main()
