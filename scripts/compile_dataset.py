@@ -1,8 +1,7 @@
 import logging
 import os
 
-from seldonite import collect, sources, run 
-from seldonite.helpers import utils
+from seldonite import collect, sources, run
 
 def log(log_msg):
     print(log_msg)
@@ -20,7 +19,7 @@ def main():
     }
 
     db_name = 'political_events'
-    db_table = 'news'
+    db_table = 'reuters_news'
 
     this_file_dir = os.path.dirname(os.path.abspath(__file__))
     log_path = os.path.join(this_file_dir, 'compile_dataset.log')
@@ -40,18 +39,27 @@ def main():
               'CC-MAIN-2014-49', 'CC-MAIN-2014-42', 'CC-MAIN-2014-41', 'CC-MAIN-2014-35', 
               'CC-MAIN-2014-23', 'CC-MAIN-2014-15', 'CC-MAIN-2014-10', 'CC-MAIN-2013-48', 
               'CC-MAIN-2013-20', 'CC-MAIN-2012', 'CC-MAIN-2009-2010', 'CC-MAIN-2008-2009']
+
+    blacklist = ['*/sports/*', '*rus.reuters*', '*fr.reuters*', '*br.reuters*', '*de.reuters*', '*es.reuters*', \
+                 '*lta.reuters*', '*ara.reuters*', '*it.reuters*', '*ar.reuters*', '*blogs.reuters*', '*graphics.reuters*', \
+                 '*jp.mobile.reuters*', '*live.special.reuters*', '*plus.reuters*', '*af.reuters*', \
+                 '*in.reuters*', '*ru.reuters*', '*jp.reuters*', '*live.jp.reuters*', '*in.mobile.reuters*', \
+                 '*br.mobile.reuters*', '*mx.reuters*', '*live.reuters*', '*cn.reuters*', '*agency.reuters*', \
+                 '*widerimage.reuters*']
+
     for crawl in crawls:
         log(f"Starting pull for crawl: {crawl}")
 
         cc_source = sources.CommonCrawl()
         cc_source.set_crawls(crawl)
-        collector = collect.Collector(cc_source, master_url=master_url, num_executors=2, executor_cores=16, executor_memory='420g', spark_conf=spark_conf)
+        collector = collect.Collector(cc_source)
         collector.only_political_articles() \
                  .on_sites(['reuters.com']) \
-                 .exclude_in_url(['*/sports/*', '*rus.reuters*']) \
-                 .in_language(lang='eng')
+                 .exclude_in_url(blacklist) \
+                 .in_language(lang='eng') \
+                 .distinct()
 
-        runner = run.Runner(collector)
+        runner = run.Runner(collector, master_url=master_url, num_executors=2, executor_cores=14, executor_memory='300g', spark_conf=spark_conf)
         runner.send_to_database(db_connection_string, db_name, db_table)
         log(f"Finished pull for crawl: {crawl}")
 
