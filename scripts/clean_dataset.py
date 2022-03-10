@@ -9,8 +9,8 @@ def main():
     spark_conf = {
         'spark.kubernetes.authenticate.driver.serviceAccountName': 'ben-dev',
         'spark.kubernetes.driver.pod.name': 'seldonite-driver',
-        'spark.driver.host': 'seldonite-driver-2',
-        'spark.driver.port': '7080'
+        'spark.driver.host': 'seldonite-driver',
+        'spark.driver.port': '7078'
     }
 
     db_name = 'political_events'
@@ -30,7 +30,7 @@ def main():
     collector.exclude_in_url(blacklist) \
              .distinct()
 
-    runner = run.Runner(collector, master_url=master_url, num_executors=1, executor_cores=16, executor_memory='420g', spark_conf=spark_conf)
+    runner = run.Runner(collector, master_url=master_url, num_executors=2, executor_cores=22, executor_memory='420g', spark_conf=spark_conf)
     runner.send_to_database(db_connection_string, db_name, db_table_out)
 
 if __name__ == '__main__':

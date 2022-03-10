@@ -8,9 +8,9 @@ def main():
 
     spark_conf = {
         'spark.kubernetes.authenticate.driver.serviceAccountName': 'ben-dev',
-        'spark.kubernetes.driver.pod.name': 'seldonite-driver-2',
-        'spark.driver.host': 'seldonite-driver-2',
-        'spark.driver.port': '7080'
+        'spark.kubernetes.driver.pod.name': 'seldonite-driver',
+        'spark.driver.host': 'seldonite-driver',
+        'spark.driver.port': '7078'
     }
 
     db_name = 'political_events'
@@ -20,7 +20,7 @@ def main():
     collector = collect.Collector(mongo_source)
     analysis = analyze.Analyze(collector) \
         .articles_over_time('month')
-    runner = run.Runner(analysis, master_url=master_url, executor_cores=8, executor_memory='64g', spark_conf=spark_conf)
+    runner = run.Runner(analysis, master_url=master_url, num_executors=2, executor_cores=22, executor_memory='420g', spark_conf=spark_conf)
     df = runner.to_pandas()
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
