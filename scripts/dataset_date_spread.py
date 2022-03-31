@@ -14,7 +14,7 @@ def main():
     }
 
     db_name = 'political_events'
-    db_table = 'reuters_news'
+    db_table = 'reuters_news_reduced'
 
     mongo_source = sources.MongoDB(db_connection_string, db_name, db_table)
     collector = collect.Collector(mongo_source)

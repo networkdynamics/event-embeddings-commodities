@@ -29,7 +29,7 @@ def main():
     if not os.path.exists(data_path):
         os.mkdir(data_path)
 
-    mongo_source = sources.MongoDB(db_connection_string, db_name, db_table_in, partition_size_mb=4)
+    mongo_source = sources.MongoDB(db_connection_string, db_name, db_table_in, partition_size_mb=16)
     #mongo_source = sources.CSV('/root/google_protest_news.csv')
     collector = collect.Collector(mongo_source)
     nl_processor = nlp.NLP(collector)
@@ -38,15 +38,15 @@ def main():
     graph_constructor = graphs.Graph(nl_processor)
     graph_constructor.build_news2vec_graph()
 
-    #runner = run.Runner(graph_constructor, master_url=master_url, num_executors=2, executor_cores=22, executor_memory='240g', driver_memory='160g', spark_conf=spark_conf)
-    runner = run.Runner(graph_constructor, driver_cores=16, driver_memory='16g')
+    #runner = run.Runner(graph_constructor, master_url=master_url, num_executors=5, executor_cores=8, executor_memory='64g', driver_memory='64g', spark_conf=spark_conf)
+    runner = run.Runner(graph_constructor, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/miniconda3/envs/seldonite/bin/python')
     G, map_df = runner.get_obj()
     
     graph_path = os.path.join(data_path, 'all_articles.edgelist')
     map_path = os.path.join(data_path, 'all_article_nodes.map')
 
     nx.write_weighted_edgelist(G, graph_path)
-    map_df.to_csv(map_path, index=False, sep=' ')
+    map_df.to_csv(map_path, index=False, sep=' ', header=False)
 
 if __name__ == '__main__':
     main()

@@ -59,7 +59,7 @@ def main():
                  .in_language(lang='eng') \
                  .distinct()
 
-        runner = run.Runner(collector, master_url=master_url, num_executors=2, executor_cores=14, executor_memory='300g', spark_conf=spark_conf)
+        runner = run.Runner(collector, master_url=master_url, num_executors=5, executor_cores=8, executor_memory='64g', spark_conf=spark_conf)
         runner.send_to_database(db_connection_string, db_name, db_table)
         log(f"Finished pull for crawl: {crawl}")
 
