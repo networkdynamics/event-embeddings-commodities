@@ -8,15 +8,15 @@ def main():
 
     spark_conf = {
         'spark.kubernetes.authenticate.driver.serviceAccountName': 'ben-dev',
-        'spark.kubernetes.driver.pod.name': 'seldonite-driver',
-        'spark.driver.host': 'seldonite-driver',
-        'spark.driver.port': '7078'
+        'spark.kubernetes.driver.pod.name': 'seldonite-driver-2',
+        'spark.driver.host': 'seldonite-driver-2',
+        'spark.driver.port': '7080'
     }
 
     db_name = 'political_events'
     db_table_in = 'reuters_news'
 
-    mongo_source = sources.news.MongoDB(db_connection_string, db_name, db_table_in, partition_size_mb=64)
+    mongo_source = sources.news.MongoDB(db_connection_string, db_name, db_table_in, partition_size_mb=32)
 
     # ignores georgia because is a US state and therefore creates lots of false positives
     collector = collect.Collector(mongo_source) \
