@@ -14,13 +14,13 @@ def main():
     }
 
     db_name = 'political_events'
-    db_table = 'reuters_news_reduced'
+    db_table = 'reuters_news'
 
-    mongo_source = sources.MongoDB(db_connection_string, db_name, db_table)
+    mongo_source = sources.news.MongoDB(db_connection_string, db_name, db_table)
     collector = collect.Collector(mongo_source)
     analysis = analyze.Analyze(collector) \
         .articles_over_time('month')
-    runner = run.Runner(analysis, master_url=master_url, num_executors=2, executor_cores=22, executor_memory='420g', spark_conf=spark_conf)
+    runner = run.Runner(analysis, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)
     df = runner.to_pandas()
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
