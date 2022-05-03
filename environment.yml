@@ -5,6 +5,7 @@ dependencies:
   - python=3.8
   - pandas
   - matplotlib
+  - networkx
   - pip
   - pip:
     - -e /home/ndg/users/bsteel2/repos/seldonite/.

@@ -1,0 +1,523 @@
+INFO:root:Starting pull for crawl: CC-MAIN-2020-34
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:34211
+INFO:root:Starting pull for crawl: CC-MAIN-2020-34
+INFO:root:Starting pull for crawl: CC-MAIN-2020-34
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:43341
+INFO:root:Starting pull for crawl: CC-MAIN-2020-34
+INFO:root:Starting pull for crawl: CC-MAIN-2020-34
+INFO:root:Starting pull for crawl: CC-MAIN-2020-34
+INFO:root:Starting pull for crawl: CC-MAIN-2020-34
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:45567
+INFO:root:Starting pull for crawl: CC-MAIN-2020-34
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:57079
+INFO:root:Starting pull for crawl: CC-MAIN-2020-29
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:35669
+INFO:root:Finished pull for crawl: CC-MAIN-2020-29
+INFO:root:Starting pull for crawl: CC-MAIN-2020-24
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:52937
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2020-24
+INFO:root:Starting pull for crawl: CC-MAIN-2020-16
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:41511
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2020-16
+INFO:root:Starting pull for crawl: CC-MAIN-2020-10
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:37829
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2020-10
+INFO:root:Starting pull for crawl: CC-MAIN-2020-05
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:55985
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2020-05
+INFO:root:Starting pull for crawl: CC-MAIN-2019-51
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:44545
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46395
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-51
+INFO:root:Starting pull for crawl: CC-MAIN-2019-47
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:57119
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:58131
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-47
+INFO:root:Starting pull for crawl: CC-MAIN-2019-43
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:60841
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46779
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-43
+INFO:root:Starting pull for crawl: CC-MAIN-2019-39
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:59323
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:44009
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-39
+INFO:root:Starting pull for crawl: CC-MAIN-2019-35
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:49925
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:54639
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-35
+INFO:root:Starting pull for crawl: CC-MAIN-2019-30
+INFO:root:Starting pull for crawl: CC-MAIN-2019-30
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46989
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:33265
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-30
+INFO:root:Starting pull for crawl: CC-MAIN-2019-26
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:47591
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:54263
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-26
+INFO:root:Starting pull for crawl: CC-MAIN-2019-22
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:59359
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:57453
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-22
+INFO:root:Starting pull for crawl: CC-MAIN-2019-18
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:49279
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:37397
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-18
+INFO:root:Starting pull for crawl: CC-MAIN-2019-13
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:39163
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46435
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-13
+INFO:root:Starting pull for crawl: CC-MAIN-2019-09
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:52423
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:59315
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:58263
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-09
+INFO:root:Starting pull for crawl: CC-MAIN-2019-04
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:33705
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:38765
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2019-04
+INFO:root:Starting pull for crawl: CC-MAIN-2018-51
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:50827
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:43749
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:59641
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Starting pull for crawl: CC-MAIN-2018-51
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:51753
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:39685
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Starting pull for crawl: CC-MAIN-2018-51
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:37629
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:40137
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:47321
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2018-51
+INFO:root:Starting pull for crawl: CC-MAIN-2018-47
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:36563
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:55563
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:54445
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:56475
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2018-47
+INFO:root:Starting pull for crawl: CC-MAIN-2018-43
+INFO:root:Starting pull for crawl: CC-MAIN-2018-43
+INFO:root:Starting pull for crawl: CC-MAIN-2018-43
+INFO:root:Starting pull for crawl: CC-MAIN-2018-43
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:38811
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:52381
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46029
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2018-43
+INFO:root:Starting pull for crawl: CC-MAIN-2018-39
+INFO:root:Starting pull for crawl: CC-MAIN-2018-39
+INFO:root:Starting pull for crawl: CC-MAIN-2018-39
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:45643
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:37433
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:58565
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2018-39
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:39067
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:41281
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:32947
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46003
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:35275
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:43281
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:39407
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:53787
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46799
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:58677
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:44259
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:45955
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:52235
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:48869
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:47889
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:48639
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:45141
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:56381
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:53547
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:38277
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Starting pull for crawl: CC-MAIN-2018-34
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:41809
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:38445
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:52777
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:43687
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:51583
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:38659
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:42243
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:56719
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2018-34
+INFO:root:Starting pull for crawl: CC-MAIN-2018-30
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:40853
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:52053
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:33369
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:53563
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:36949
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:47027
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46165
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:57905
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:34081
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:37463
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:53123
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:39239
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2018-30
+INFO:root:Starting pull for crawl: CC-MAIN-2018-26
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46009
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:49867
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:55443
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:50169
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:56017
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:45477
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:40197
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:50361
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:37843
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2018-26
+INFO:root:Starting pull for crawl: CC-MAIN-2018-22
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:52915
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:32851
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:35175
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:57421
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:50605
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46139
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:44399
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2018-22
+INFO:root:Starting pull for crawl: CC-MAIN-2018-17
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:46443
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:37397
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:57845
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2018-17
+INFO:root:Starting pull for crawl: CC-MAIN-2018-13
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:57503
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:43411
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:40893
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:42583
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:60729
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:42811
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:59035
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:49025
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:53533
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.227:39337
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Starting pull for crawl: CC-MAIN-2018-13
+INFO:root:Starting pull for crawl: CC-MAIN-2018-13
+INFO:root:Starting pull for crawl: CC-MAIN-2018-13
+INFO:root:Starting pull for crawl: CC-MAIN-2018-13
+INFO:root:Starting pull for crawl: CC-MAIN-2018-13
+INFO:root:Starting pull for crawl: CC-MAIN-2018-09
+INFO:root:Starting pull for crawl: CC-MAIN-2018-13
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:41943
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:37793
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:54375
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:58433
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:33287
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:48331
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:57447
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:36375
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:33505
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:47205
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:55473
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:41553
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:38585
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Starting pull for crawl: CC-MAIN-2008-2009
+INFO:root:Starting pull for crawl: CC-MAIN-2013-20
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:40965
+INFO:root:Finished pull for crawl: CC-MAIN-2013-20
+INFO:root:Starting pull for crawl: CC-MAIN-2012
+INFO:root:Starting pull for crawl: CC-MAIN-2009-2010
+INFO:root:Starting pull for crawl: CC-MAIN-2013-48
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:53305
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:36935
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:56189
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:55559
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2013-48
+INFO:root:Starting pull for crawl: CC-MAIN-2014-10
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:45321
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:43131
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:49265
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2014-10
+INFO:root:Starting pull for crawl: CC-MAIN-2014-15
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:36707
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2014-15
+INFO:root:Starting pull for crawl: CC-MAIN-2014-23
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:57091
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:44529
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2014-23
+INFO:root:Starting pull for crawl: CC-MAIN-2014-35
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:58873
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2014-35
+INFO:root:Starting pull for crawl: CC-MAIN-2014-41
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:35467
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2014-41
+INFO:root:Starting pull for crawl: CC-MAIN-2014-42
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:60939
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2014-42
+INFO:root:Starting pull for crawl: CC-MAIN-2014-49
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:59923
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2014-49
+INFO:root:Starting pull for crawl: CC-MAIN-2014-52
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:52455
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:51273
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2014-52
+INFO:root:Starting pull for crawl: CC-MAIN-2015-06
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:57251
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2015-06
+INFO:root:Starting pull for crawl: CC-MAIN-2015-11
+INFO:root:Starting pull for crawl: CC-MAIN-2015-11
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:45813
+INFO:root:Finished pull for crawl: CC-MAIN-2015-11
+INFO:root:Starting pull for crawl: CC-MAIN-2015-14
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:47965
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2015-14
+INFO:root:Starting pull for crawl: CC-MAIN-2015-18
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:54301
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:48717
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2015-18
+INFO:root:Starting pull for crawl: CC-MAIN-2015-22
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:35917
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:45397
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2015-22
+INFO:root:Starting pull for crawl: CC-MAIN-2015-27
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:52057
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2015-27
+INFO:root:Starting pull for crawl: CC-MAIN-2015-32
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:50985
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2015-32
+INFO:root:Starting pull for crawl: CC-MAIN-2015-35
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:56869
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:40705
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2015-35
+INFO:root:Starting pull for crawl: CC-MAIN-2015-40
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:51937
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2015-40
+INFO:root:Starting pull for crawl: CC-MAIN-2015-48
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:35829
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2015-48
+INFO:root:Starting pull for crawl: CC-MAIN-2016-07
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:53011
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:60049
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2016-07
+INFO:root:Starting pull for crawl: CC-MAIN-2016-18
+INFO:root:Starting pull for crawl: CC-MAIN-2016-18
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:55839
+INFO:root:Finished pull for crawl: CC-MAIN-2016-18
+INFO:root:Starting pull for crawl: CC-MAIN-2016-22
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:55243
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2016-22
+INFO:root:Starting pull for crawl: CC-MAIN-2016-26
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:44025
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2016-26
+INFO:root:Starting pull for crawl: CC-MAIN-2016-30
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:38167
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:54503
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:42239
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2016-30
+INFO:root:Starting pull for crawl: CC-MAIN-2016-36
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:55861
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2016-36
+INFO:root:Starting pull for crawl: CC-MAIN-2016-40
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:39657
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:36891
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2016-40
+INFO:root:Starting pull for crawl: CC-MAIN-2016-44
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:34783
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:47827
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2016-44
+INFO:root:Starting pull for crawl: CC-MAIN-2016-50
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:60341
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:42191
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:59751
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2016-50
+INFO:root:Starting pull for crawl: CC-MAIN-2017-04
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:56729
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:45519
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:38159
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:root:Finished pull for crawl: CC-MAIN-2017-04
+INFO:root:Starting pull for crawl: CC-MAIN-2017-09
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:52611
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:33197
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
+INFO:bigdl.orca.learn.log_monitor:started log server on 10.244.0.165:37389
+INFO:bigdl.orca.learn.tf2.pyspark_estimator:Starting predict step.
