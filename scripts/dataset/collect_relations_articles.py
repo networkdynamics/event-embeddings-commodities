@@ -10,7 +10,8 @@ def main():
         'spark.kubernetes.authenticate.driver.serviceAccountName': 'ben-dev',
         'spark.kubernetes.driver.pod.name': 'seldonite-driver',
         'spark.driver.host': 'seldonite-driver',
-        'spark.driver.port': '7078'
+        'spark.driver.port': '7078',
+        'spark.driver.maxResultSize': '16g'
     }
 
     db_name = 'political_events'
