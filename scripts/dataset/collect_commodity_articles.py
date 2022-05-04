@@ -38,7 +38,7 @@ def main():
         os.mkdir(data_path)
     
     out_path = os.path.join(data_path, 'all_commodities.csv')
-    commodities_articles.to_csv()
+    commodities_articles.to_csv(out_path)
 
 if __name__ == '__main__':
     main()
