@@ -23,8 +23,8 @@ def main():
         .by_keywords([
             'brent', 'crude', 'oil', 'cocoa', 'coffee', 'copper', 'corn',
             'cotton', 'cattle', 'gold', 'heating', 'hogs', 'cattle', 'lumber', 
-            'gas', 'oat', 'palladium', 'platinum', 'rbob', 
-            'gasoline', 'silver', 'soybean', 'meal'
+            'gas', 'oat', 'oats', 'palladium', 'platinum', 'rbob', 
+            'gasoline', 'silver', 'soybean', 'soybeans', 'meal', 'sugar', 'wheat'
         ])
     
     runner = run.Runner(collector, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/miniconda3/envs/seldonite/bin/python')
