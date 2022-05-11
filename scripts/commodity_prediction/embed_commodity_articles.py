@@ -39,7 +39,7 @@ def main():
         'sugar': ['sugar'],
         'wheat': ['wheat']
     }
-
+    spark_manager = None
     for commodity, commodity_key_words in commodities.items():
         csv_path = os.path.join(data_path, 'commodity_data', f"{commodity}_articles.csv")
         source = sources.news.CSV(csv_path)
@@ -54,10 +54,14 @@ def main():
         
         runner = run.Runner(embeddor, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/.conda/envs/seldonite/bin/python')
         #runner = run.Runner(collector, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)
+        if spark_manager:
+            runner.set_spark_manager(spark_manager)
         commodities_articles = runner.to_pandas()
+        spark_manager = runner.get_spark_manager()
 
         out_path = os.path.join(data_path, 'commodity_data', f"{commodity}_embed_articles.csv")
         commodities_articles.to_csv(out_path)
+    spark_manager.stop()
 
 if __name__ == '__main__':
     main()

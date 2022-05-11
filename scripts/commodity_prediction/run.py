@@ -4,6 +4,7 @@ import operator
 import os
 import random
 
+import numpy as np
 import pandas as pd
 import torch
 import tqdm
@@ -11,7 +12,7 @@ import tqdm
 TEACHER_FORCING_RATIO = 0.5
 MAX_EPOCHS = 10000
 EARLY_STOPPING_PATIENCE = 25
-SEQUENCE_LENGTH = 300
+SEQUENCE_LENGTH = 4
 
 
 class CommodityDataset(torch.utils.data.Dataset):
@@ -35,8 +36,9 @@ class CommodityDataset(torch.utils.data.Dataset):
         article_df = pd.read_csv(commodity_article_path)
         article_df = article_df[['title', 'publish_date', 'embedding']]
         article_df['publish_date'] = pd.to_datetime(article_df['publish_date'])
+        article_df['embedding'] = article_df['embedding'].str.strip('[]').str.split(',').apply(lambda x: np.array(x, dtype=float))
 
-        self.embedding_size = article_df['embedding'].first()
+        self.embedding_size = len(article_df['embedding'].iloc[0])
 
         # group articles by day
         article_df = article_df.groupby('publish_date').agg(list).reset_index()
@@ -44,84 +46,118 @@ class CommodityDataset(torch.utils.data.Dataset):
         # group articles by next trading day
         df_merge = price_df.merge(article_df, how='cross')
         df_merge = df_merge.query('publish_date > last_date and publish_date <= date')
-        df = price_df.merge(df_merge, on=['last_date','date'], how='left').fillna()
+        df = price_df.merge(df_merge, on=['last_date','date'], how='left')
         df = df.rename(columns={'close_x': 'close'})
         df = df[['date', 'close', 'title', 'embedding']]
         df = df.groupby(['date', 'close']).agg(sum).reset_index()
         df['last_close'] = df['close'].shift(1)
         df = df.iloc[1:]
+
+        # perform padding
+        max_articles = df[df['embedding'] != 0]['embedding'].apply(len).max()
+
+        def pad_embeddings(embeddings):
+            padded = np.zeros((max_articles, self.embedding_size), dtype=float)
+            if embeddings != 0:
+                for idx in range(len(embeddings)):
+                    padded[idx,:] = embeddings[idx][:]
+            return padded
+
+
+        def create_attention_mask(embeddings):
+            attention_mask = np.zeros((max_articles,), dtype=int)
+            if embeddings != 0:
+                attention_mask[:len(embeddings)] = 1
+            return attention_mask
+
+        df['padded_embedding'] = df['embedding'].apply(pad_embeddings)
+        df['attention_mask'] = df['embedding'].apply(create_attention_mask)
+
         self.df = df
 
     def __len__(self):
-        return len(self.df)
+        return len(self.df) - SEQUENCE_LENGTH + 1
 
     def __getitem__(self, idx):
         sequence = self.df.iloc[idx:idx+SEQUENCE_LENGTH]
 
-        return {'inputs': sequence['last_close'].values, 'targets': sequence['close'].values, 'encoder_outputs': sequence['last_close'].values}
+        data_seq = {
+            'inputs': torch.tensor(sequence['last_close'].values).float(), 
+            'targets': torch.tensor(sequence['close'].values).float(), 
+            'encoder_outputs': torch.tensor(np.stack(sequence['padded_embedding'].values)).float(),
+            'attention_mask': torch.tensor(np.stack(sequence['attention_mask'].values)).float()
+        }
+        return data_seq
 
 
 class AttnDecoderRNN(torch.nn.Module):
-    def __init__(self, embedding_size, hidden_size, dropout_p=0.1):
+    def __init__(self, embedding_size, hidden_size, combine='attn', dropout_p=0.1):
         super().__init__()
         self.hidden_size = hidden_size
+        self.combine = combine
         self.dropout_p = dropout_p
 
         self.attn = torch.nn.Linear(embedding_size + hidden_size + 1, 1)
         self.attn_combine = torch.nn.Linear(embedding_size + 1, hidden_size)
         self.dropout = torch.nn.Dropout(self.dropout_p)
-        self.gru = torch.nn.GRU(self.hidden_size, self.hidden_size)
+        self.gru = torch.nn.GRU(self.hidden_size, self.hidden_size, batch_first=True)
         self.out = torch.nn.Linear(self.hidden_size, 1)
 
-    def forward(self, input, hidden, encoder_outputs):
+    def forward(self, input, hidden, encoder_outputs, attention_mask):
 
-        attn_weights = self.attn(torch.cat((encoder_outputs, hidden, input), 1))
-        attn_weights = torch.functional.softmax(attn_weights, dim=1)
-        attn_applied = torch.bmm(attn_weights.unsqueeze(0),
-                                 encoder_outputs.unsqueeze(0))
+        if self.combine == 'attn':
+            num_attn_points = encoder_outputs.shape[1]
+            attn_params = torch.cat((encoder_outputs, hidden.unsqueeze(1).expand(-1, num_attn_points, -1), input.view(-1, 1, 1).expand(-1, num_attn_points, -1)), 2)
+            attn_weights = self.attn(attn_params)
+            attn_weights = torch.nn.functional.softmax(attn_weights, dim=1)
+            attn_weights = attn_weights.squeeze(2) * attention_mask
+            attn_applied = torch.bmm(attn_weights.unsqueeze(1), encoder_outputs)
+        elif self.combine == 'avg':
+            attn_applied = torch.mean(encoder_outputs, 1)
 
-        output = torch.cat((input[0], attn_applied[0]), 1)
-        output = self.attn_combine(output).unsqueeze(0)
+        output = torch.cat((input.unsqueeze(1), attn_applied.squeeze(1)), 1)
+        output = self.attn_combine(output)
 
-        output = torch.functional.relu(output)
-        output, hidden = self.gru(output, hidden)
+        output = torch.nn.functional.relu(output)
+        output, hidden = self.gru(output.unsqueeze(1), hidden.unsqueeze(0))
 
-        output = torch.functional.log_softmax(self.out(output[0]), dim=1)
+        output = torch.nn.functional.log_softmax(self.out(output), dim=1)
         return output, hidden, attn_weights
 
-    def init_hidden(self, device):
-        return torch.zeros(1, 1, self.hidden_size, device=device)
+    def init_hidden(self, batch_size, device):
+        return torch.zeros(batch_size, self.hidden_size, device=device)
 
 
-def train_model(encoder_outputs, inputs, targets, decoder, optimizer, criterion, device):
+def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, optimizer, criterion, device):
     
     optimizer.zero_grad()
 
-    target_length = targets.size(0)
+    batch_size = targets.shape[0]
+    target_length = targets.shape[1]
 
     loss = 0
 
-    decoder_hidden = decoder.init_hidden()
+    decoder_hidden = decoder.init_hidden(batch_size, device)
 
     use_teacher_forcing = random.random() < TEACHER_FORCING_RATIO
 
     if use_teacher_forcing:
         # Teacher forcing: Feed the target as the next input
         for idx in range(target_length):
-            decoder_input = inputs[idx]  # Teacher forcing
+            decoder_input = inputs[:, idx]  # Teacher forcing
             decoder_output, decoder_hidden, decoder_attention = decoder(
-                decoder_input, decoder_hidden, encoder_outputs[idx])
-            loss += criterion(decoder_output, targets[idx])
+                decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
+            loss += criterion(decoder_output, targets[:,idx])
 
     else:
-        decoder_input = torch.tensor(inputs[0], device=device)
+        decoder_input = torch.tensor(inputs[:, 0], device=device)
         # Without teacher forcing: use its own predictions as the next input
         for idx in range(target_length):
             decoder_output, decoder_hidden, decoder_attention = decoder(
-                decoder_input, decoder_hidden, encoder_outputs[idx])
+                decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
             decoder_input = decoder_output.detach() # detach from history as input
 
-            loss += criterion(decoder_output, targets[idx])
+            loss += criterion(decoder_output, targets[:,idx])
 
     loss.backward()
     optimizer.step()
@@ -148,10 +184,11 @@ def train(model, train_data, val_data, device, checkpoint_path, resume):
         progress_bar_data = tqdm.tqdm(enumerate(train_data), total=len(train_data))
         for batch_idx, batch in progress_bar_data:
             encoder_outputs = batch['encoder_outputs'].to(device)
+            attention_masks = batch['attention_mask'].to(device)
             inputs = batch['inputs'].to(device)
             targets = batch['targets'].to(device)
             
-            batch_loss = train_model(encoder_outputs, inputs, targets, model, optimizer, criterion, device)
+            batch_loss = train_model(encoder_outputs, attention_masks, inputs, targets, model, optimizer, criterion, device)
             progress_bar_data.set_description(f"Current Loss: {batch_loss:.4f}")
             train_loss += batch_loss
         
@@ -188,7 +225,7 @@ def train(model, train_data, val_data, device, checkpoint_path, resume):
 
         print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
 
-def test_model(encoder_outputs, target_tensor, decoder, criterion, device):
+def test_model(encoder_outputs, attention_mask, target_tensor, decoder, criterion, device):
     
     target_length = target_tensor.size(0)
 
