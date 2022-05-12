@@ -107,7 +107,7 @@ class AttnDecoderRNN(torch.nn.Module):
 
         if self.combine == 'attn':
             num_attn_points = encoder_outputs.shape[1]
-            attn_params = torch.cat((encoder_outputs, hidden.unsqueeze(1).expand(-1, num_attn_points, -1), input.view(-1, 1, 1).expand(-1, num_attn_points, -1)), 2)
+            attn_params = torch.cat((encoder_outputs, torch.permute(hidden, (1,0,2)).expand(-1, num_attn_points, -1), input.view(-1, 1, 1).expand(-1, num_attn_points, -1)), 2)
             attn_weights = self.attn(attn_params)
             attn_weights = torch.nn.functional.softmax(attn_weights, dim=1)
             attn_weights = attn_weights.squeeze(2) * attention_mask
@@ -119,19 +119,17 @@ class AttnDecoderRNN(torch.nn.Module):
         output = self.attn_combine(output)
 
         output = torch.nn.functional.relu(output)
-        output, hidden = self.gru(output.unsqueeze(1), hidden.unsqueeze(0))
+        output, hidden = self.gru(output.unsqueeze(1), hidden)
 
-        output = torch.nn.functional.log_softmax(self.out(output), dim=1)
+        output = self.out(output).squeeze(2).squeeze(1)
         return output, hidden, attn_weights
 
     def init_hidden(self, batch_size, device):
-        return torch.zeros(batch_size, self.hidden_size, device=device)
+        return torch.zeros(1, batch_size, self.hidden_size, device=device)
 
 
-def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, optimizer, criterion, device):
+def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, criterion, device):
     
-    optimizer.zero_grad()
-
     batch_size = targets.shape[0]
     target_length = targets.shape[1]
 
@@ -150,7 +148,7 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, opti
             loss += criterion(decoder_output, targets[:,idx])
 
     else:
-        decoder_input = torch.tensor(inputs[:, 0], device=device)
+        decoder_input = inputs[:, 0]
         # Without teacher forcing: use its own predictions as the next input
         for idx in range(target_length):
             decoder_output, decoder_hidden, decoder_attention = decoder(
@@ -159,10 +157,7 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, opti
 
             loss += criterion(decoder_output, targets[:,idx])
 
-    loss.backward()
-    optimizer.step()
-
-    return loss.item() / target_length
+    return loss
 
 def train(model, train_data, val_data, device, checkpoint_path, resume):
 
@@ -188,7 +183,12 @@ def train(model, train_data, val_data, device, checkpoint_path, resume):
             inputs = batch['inputs'].to(device)
             targets = batch['targets'].to(device)
             
-            batch_loss = train_model(encoder_outputs, attention_masks, inputs, targets, model, optimizer, criterion, device)
+            optimizer.zero_grad()
+            loss = train_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device)
+            loss.backward()
+            optimizer.step()
+
+            batch_loss = loss.item() / targets.shape[1]
             progress_bar_data.set_description(f"Current Loss: {batch_loss:.4f}")
             train_loss += batch_loss
         
@@ -199,10 +199,12 @@ def train(model, train_data, val_data, device, checkpoint_path, resume):
         with torch.no_grad():
             for batch_idx, batch in enumerate(val_data):
                 encoder_outputs = batch['encoder_outputs'].to(device)
+                attention_masks = batch['attention_mask'].to(device)
                 inputs = batch['inputs'].to(device)
                 targets = batch['targets'].to(device)
 
-                batch_loss = train_model(encoder_outputs, inputs, targets, model, optimizer, criterion, device)
+                loss = train_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device)
+                batch_loss = loss.item() / targets.shape[1]
                 val_loss += batch_loss
 
         val_loss /= len(val_data)
@@ -291,6 +293,9 @@ def load_data(commodity, batch_size):
 
 def main(args):
     train_data, val_data, test_data, embedding_size = load_data(args.commodity, args.batch_size)
+
+    if not os.path.exists(os.path.dirname(args.checkpoint_path)):
+        os.makedirs(os.path.dirname(args.checkpoint_path))
 
     embedding_size = embedding_size
     hidden_size = 4
