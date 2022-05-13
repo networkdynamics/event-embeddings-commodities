@@ -25,7 +25,8 @@ def main():
 
         ignore_countries = ['Georgia'] if country == 'United States' else []
         collector = collect.Collector(source) \
-            .mentions_countries(countries=[country], min_num_countries=2, ignore_countries=ignore_countries, output=True)
+            .mentions_countries(countries=[country], min_num_countries=2, ignore_countries=ignore_countries, output=True) \
+            .in_language(lang='en')
         
         runner = run.Runner(collector, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/.conda/envs/seldonite/bin/python', keep_alive=True, spark_conf=local_spark_conf)
         #runner = run.Runner(collector, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)
@@ -35,7 +36,7 @@ def main():
         commodities_articles = runner.to_pandas()
         spark_manager = runner.get_spark_manager()
 
-        out_path = os.path.join(data_path, 'relations', f"{country.lower()}_articles.csv")
+        out_path = os.path.join(data_path, 'relations', f"{country.lower().replace(' ', '_')}_articles.csv")
         commodities_articles.to_csv(out_path)
 
     spark_manager.stop()

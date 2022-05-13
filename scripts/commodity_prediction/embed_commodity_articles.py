@@ -50,7 +50,7 @@ def main():
             .top_tfidf(20, load_path=tfidf_path)
 
         embeddor = embed.Embed(nl_processor) \
-            .news2vec_embed(embedding_path)
+            .news2vec_embed(export_features=True)
         
         runner = run.Runner(embeddor, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/.conda/envs/seldonite/bin/python')
         #runner = run.Runner(collector, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)

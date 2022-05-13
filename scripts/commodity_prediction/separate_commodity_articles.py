@@ -13,7 +13,7 @@ def main():
     csv_path = os.path.join(data_path, 'commodity_data', 'all_commodities.csv')
     
     commodities = {
-        #'brent_crude_oil': ['brent', 'crude', 'oil'],
+        'brent_crude_oil': ['brent', 'crude', 'oil'],
         'crude_oil': ['crude', 'oil'],
         'natural_gas': ['gas'],
         'rbob_gasoline': ['rbob', 'gasoline'],
@@ -44,7 +44,8 @@ def main():
         source = sources.news.CSV(csv_path)
 
         collector = collect.Collector(source) \
-            .by_keywords(commodity_key_words)
+            .by_keywords(commodity_key_words) \
+            .in_language(lang='en')
         
         runner = run.Runner(collector, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/.conda/envs/seldonite/bin/python', keep_alive=True)
         #runner = run.Runner(collector, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)
