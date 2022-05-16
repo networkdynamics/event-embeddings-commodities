@@ -12,16 +12,16 @@ import tqdm
 TEACHER_FORCING_RATIO = 0.5
 MAX_EPOCHS = 10000
 EARLY_STOPPING_PATIENCE = 25
-SEQUENCE_LENGTH = 4
+SEQUENCE_LENGTH = 100
 
 
 class CommodityDataset(torch.utils.data.Dataset):
-    def __init__(self, commodity):
+    def __init__(self, commodity, embed_suffix):
         this_dir_path = os.path.dirname(os.path.abspath(__file__))
         commodity_dir = os.path.join(this_dir_path, '..', '..', 'data', 'commodity_data')
 
-        commodity_price_path = os.path.join(commodity_dir, f"mock_{commodity}.csv")
-        commodity_article_path = os.path.join(commodity_dir, f"mock_{commodity}_articles.csv")
+        commodity_price_path = os.path.join(commodity_dir, f"{commodity}.csv")
+        commodity_article_path = os.path.join(commodity_dir, f"{commodity}_{embed_suffix}.csv")
         price_df = pd.read_csv(commodity_price_path)
         price_df = price_df.rename(columns={'Date': 'date', 'Close': 'close'})
         price_df = price_df[['date', 'close']]
@@ -36,7 +36,7 @@ class CommodityDataset(torch.utils.data.Dataset):
         article_df = pd.read_csv(commodity_article_path)
         article_df = article_df[['title', 'publish_date', 'embedding']]
         article_df['publish_date'] = pd.to_datetime(article_df['publish_date'])
-        article_df['embedding'] = article_df['embedding'].str.strip('[]').str.split(',').apply(lambda x: np.array(x, dtype=float))
+        article_df['embedding'] = article_df['embedding'].str.strip('[]').apply(lambda x: np.fromstring(x, sep=' '))
 
         self.embedding_size = len(article_df['embedding'].iloc[0])
 
@@ -277,8 +277,8 @@ def test(model, test_data, device, checkpoint_path):
         
     test_loss /= len(test_data)
 
-def load_data(commodity, batch_size):
-    dataset = CommodityDataset(commodity)
+def load_data(commodity, embed_suffix, batch_size):
+    dataset = CommodityDataset(commodity, embed_suffix)
 
     train_size = int(0.8 * len(dataset))
     val_size = int(0.1 * len(dataset))
@@ -292,7 +292,7 @@ def load_data(commodity, batch_size):
     return train_dataloader, val_dataloader, test_dataloader, dataset.embedding_size
 
 def main(args):
-    train_data, val_data, test_data, embedding_size = load_data(args.commodity, args.batch_size)
+    train_data, val_data, test_data, embedding_size = load_data(args.commodity, args.embed_suffix, args.batch_size)
 
     if not os.path.exists(os.path.dirname(args.checkpoint_path)):
         os.makedirs(os.path.dirname(args.checkpoint_path))
@@ -302,6 +302,7 @@ def main(args):
     model = AttnDecoderRNN(embedding_size, hidden_size)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
 
     if args.mode == 'train':
         train(model, train_data, val_data, device, args.checkpoint_path, args.resume)
@@ -313,6 +314,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch-size', type=int)
     parser.add_argument('--commodity')
+    parser.add_argument('--embed-suffix')
     parser.add_argument('--mode')
     parser.add_argument('--resume')
     parser.add_argument('--checkpoint-path')

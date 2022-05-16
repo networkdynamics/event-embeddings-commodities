@@ -14,25 +14,25 @@ def main():
     embedding_path = os.path.join(data_path, 'embeddings', '0713_21_articles.emb')
     
     commodities = {
-        'brent_crude_oil': ['brent', 'crude', 'oil'],
-        'crude_oil': ['crude', 'oil'],
-        'natural_gas': ['gas'],
-        'rbob_gasoline': ['rbob', 'gasoline'],
-        'copper': ['copper'],
-        'palladium': ['palladium'],
-        'platinum': ['platinum'],
-        'gold': ['gold'],
-        'silver': ['silver'],
-        'corn': ['corn'],
-        'oat': ['oat', 'oats'],
-        'cotton': ['cotton'],
-        'lumber': ['lumber'],
-        'cocoa': ['cocoa'],
-        'coffee': ['coffee'],
-        'feeder_cattle': ['cattle'],
-        'heating_oil': ['heating', 'oil'],
-        'lean_hogs': ['hogs'],
-        'live_cattle': ['cattle'],
+        #'brent_crude_oil': ['brent', 'crude', 'oil'],
+        #'crude_oil': ['crude', 'oil'],
+        #'natural_gas': ['gas'],
+        #'rbob_gasoline': ['rbob', 'gasoline'],
+        #'copper': ['copper'],
+        #'palladium': ['palladium'],
+        #'platinum': ['platinum'],
+        #'gold': ['gold'],
+        #'silver': ['silver'],
+        #'corn': ['corn'],
+        #'oat': ['oat', 'oats'],
+        #'cotton': ['cotton'],
+        #'lumber': ['lumber'],
+        #'cocoa': ['cocoa'],
+        #'coffee': ['coffee'],
+        #'feeder_cattle': ['cattle'],
+        #'heating_oil': ['heating', 'oil'],
+        #'lean_hogs': ['hogs'],
+        #'live_cattle': ['cattle'],
         'soybean_meal': ['soybean', 'soybeans'],
         'soybean_oil': ['soybean', 'soybeans'],
         'soybean': ['soybean', 'soybeans'],
@@ -52,7 +52,7 @@ def main():
         embeddor = embed.Embed(nl_processor) \
             .news2vec_embed(export_features=True)
         
-        runner = run.Runner(embeddor, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/.conda/envs/seldonite/bin/python')
+        runner = run.Runner(embeddor, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/.conda/envs/seldonite/bin/python', keep_alive=True)
         #runner = run.Runner(collector, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)
         if spark_manager:
             runner.set_spark_manager(spark_manager)
