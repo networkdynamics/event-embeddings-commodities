@@ -16,7 +16,11 @@ SEQUENCE_LENGTH = 100
 
 
 class CommodityDataset(torch.utils.data.Dataset):
-    def __init__(self, commodity, embed_suffix):
+    def __init__(self, commodity, embed_suffix, days_ahead, seq_len):
+
+        self.days_ahead = days_ahead
+        self.seq_len = seq_len
+
         this_dir_path = os.path.dirname(os.path.abspath(__file__))
         commodity_dir = os.path.join(this_dir_path, '..', '..', 'data', 'commodity_data')
 
@@ -50,8 +54,11 @@ class CommodityDataset(torch.utils.data.Dataset):
         df = df.rename(columns={'close_x': 'close'})
         df = df[['date', 'close', 'title', 'embedding']]
         df = df.groupby(['date', 'close']).agg(sum).reset_index()
-        df['last_close'] = df['close'].shift(1)
-        df = df.iloc[1:]
+
+        # normalize price
+        df['close'] = (df['close'] - df['close'].mean()) / df['close'].std()
+        df['last_close'] = df['close'].shift(self.days_ahead)
+        df = df.iloc[self.days_ahead:]
 
         # perform padding
         max_articles = df[df['embedding'] != 0]['embedding'].apply(len).max()
@@ -76,10 +83,10 @@ class CommodityDataset(torch.utils.data.Dataset):
         self.df = df
 
     def __len__(self):
-        return len(self.df) - SEQUENCE_LENGTH + 1
+        return len(self.df) - self.seq_len + 1
 
     def __getitem__(self, idx):
-        sequence = self.df.iloc[idx:idx+SEQUENCE_LENGTH]
+        sequence = self.df.iloc[idx:idx+self.seq_len]
 
         data_seq = {
             'inputs': torch.tensor(sequence['last_close'].values).float(), 
@@ -119,6 +126,7 @@ class AttnDecoderRNN(torch.nn.Module):
         output = self.attn_combine(output)
 
         output = torch.nn.functional.relu(output)
+        output = self.dropout(output)
         output, hidden = self.gru(output.unsqueeze(1), hidden)
 
         output = self.out(output).squeeze(2).squeeze(1)
@@ -128,7 +136,7 @@ class AttnDecoderRNN(torch.nn.Module):
         return torch.zeros(1, batch_size, self.hidden_size, device=device)
 
 
-def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, criterion, device):
+def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, criterion, device, days_ahead):
     
     batch_size = targets.shape[0]
     target_length = targets.shape[1]
@@ -139,6 +147,7 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
 
     use_teacher_forcing = random.random() < TEACHER_FORCING_RATIO
 
+    # TODO work this out for multiple days ahead forecasting
     if use_teacher_forcing:
         # Teacher forcing: Feed the target as the next input
         for idx in range(target_length):
@@ -148,18 +157,21 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
             loss += criterion(decoder_output, targets[:,idx])
 
     else:
-        decoder_input = inputs[:, 0]
         # Without teacher forcing: use its own predictions as the next input
         for idx in range(target_length):
             decoder_output, decoder_hidden, decoder_attention = decoder(
                 decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
-            decoder_input = decoder_output.detach() # detach from history as input
+            
+            if idx < days_ahead:
+                decoder_input = inputs[:, idx]
+            else:
+                decoder_input = decoder_output.detach() # detach from history as input
 
             loss += criterion(decoder_output, targets[:,idx])
 
     return loss
 
-def train(model, train_data, val_data, device, checkpoint_path, resume):
+def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, seq_len):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
@@ -184,7 +196,7 @@ def train(model, train_data, val_data, device, checkpoint_path, resume):
             targets = batch['targets'].to(device)
             
             optimizer.zero_grad()
-            loss = train_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device)
+            loss = train_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device, days_ahead)
             loss.backward()
             optimizer.step()
 
@@ -203,7 +215,7 @@ def train(model, train_data, val_data, device, checkpoint_path, resume):
                 inputs = batch['inputs'].to(device)
                 targets = batch['targets'].to(device)
 
-                loss = train_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device)
+                loss = train_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device, days_ahead)
                 batch_loss = loss.item() / targets.shape[1]
                 val_loss += batch_loss
 
@@ -227,7 +239,7 @@ def train(model, train_data, val_data, device, checkpoint_path, resume):
 
         print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
 
-def test_model(encoder_outputs, attention_mask, target_tensor, decoder, criterion, device):
+def test_model(encoder_outputs, attention_mask, target_tensor, decoder, criterion, device, days_ahead):
     
     target_length = target_tensor.size(0)
 
@@ -238,6 +250,7 @@ def test_model(encoder_outputs, attention_mask, target_tensor, decoder, criterio
 
     use_teacher_forcing = random.random() < TEACHER_FORCING_RATIO
 
+    # TODO work this out for multiple days ahead forecasting
     if use_teacher_forcing:
         # Teacher forcing: Feed the target as the next input
         for idx in range(target_length):
@@ -257,7 +270,7 @@ def test_model(encoder_outputs, attention_mask, target_tensor, decoder, criterio
 
     return loss.item() / target_length
 
-def test(model, test_data, device, checkpoint_path):
+def test(model, test_data, device, checkpoint_path, days_ahead, seq_len):
 
     criterion = torch.nn.MSELoss()
     model.eval()
@@ -272,18 +285,22 @@ def test(model, test_data, device, checkpoint_path):
             encoder_outputs = batch['encoder_outputs'].to(device)
             targets = batch['targets'].to(device)
             
-            batch_loss = train_model(encoder_outputs, targets, model, criterion, device)
+            batch_loss = test_model(encoder_outputs, targets, model, criterion, device, days_ahead, seq_len)
             test_loss += batch_loss
         
     test_loss /= len(test_data)
 
-def load_data(commodity, embed_suffix, batch_size):
-    dataset = CommodityDataset(commodity, embed_suffix)
+def load_data(commodity, embed_suffix, batch_size, days_ahead, seq_len):
+    dataset = CommodityDataset(commodity, embed_suffix, days_ahead, seq_len)
 
     train_size = int(0.8 * len(dataset))
     val_size = int(0.1 * len(dataset))
     test_size = len(dataset) - train_size - val_size
-    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size, test_size])
+    indices = list(range(len(dataset)))
+    
+    train_dataset = torch.utils.data.Subset(dataset, indices[:train_size])
+    val_dataset = torch.utils.data.Subset(dataset, indices[train_size:train_size + val_size])
+    test_dataset = torch.utils.data.Subset(dataset, indices[-test_size:])
 
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size)
@@ -292,7 +309,7 @@ def load_data(commodity, embed_suffix, batch_size):
     return train_dataloader, val_dataloader, test_dataloader, dataset.embedding_size
 
 def main(args):
-    train_data, val_data, test_data, embedding_size = load_data(args.commodity, args.embed_suffix, args.batch_size)
+    train_data, val_data, test_data, embedding_size = load_data(args.commodity, args.embed_suffix, args.batch_size, args.days_ahead, args.seq_len)
 
     if not os.path.exists(os.path.dirname(args.checkpoint_path)):
         os.makedirs(os.path.dirname(args.checkpoint_path))
@@ -305,9 +322,9 @@ def main(args):
     model = model.to(device)
 
     if args.mode == 'train':
-        train(model, train_data, val_data, device, args.checkpoint_path, args.resume)
+        train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead, args.seq_len)
     elif args.mode == 'test':
-        test(model, test_data, device, args.checkpoint_path)
+        test(model, test_data, device, args.checkpoint_path, args.days_ahead, args.seq_len)
 
 if __name__ == '__main__':
 
@@ -318,6 +335,8 @@ if __name__ == '__main__':
     parser.add_argument('--mode')
     parser.add_argument('--resume')
     parser.add_argument('--checkpoint-path')
+    parser.add_argument('--days-ahead', type=int, default=1)
+    parser.add_argument('--seq-len', type=int, default=100)
     args = parser.parse_args()
 
     main(args)
