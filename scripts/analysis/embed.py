@@ -25,6 +25,7 @@ def accumulate_embeddings(df, embeddings_df, feature_cols, len_embed, feature_va
 
 def main(args):
     
+    embedding_file_name = os.path.basename(args.embeddings)
     embeddings_df = pd.read_csv(args.embeddings)
 
     # sort out columns
@@ -37,6 +38,11 @@ def main(args):
     article_paths = [os.path.join(args.data_path, file_name) for file_name in os.listdir(args.data_path) if 'news2vec_features' in file_name]
 
     for article_path in article_paths:
+
+        article_embed_path = article_path.replace('news2vec_features', embedding_file_name)
+        if os.path.exists(article_embed_path):
+            continue
+
         print(f"Embedding articles in {os.path.basename(article_path)}")
         article_df = pd.read_csv(article_path)
 
@@ -60,7 +66,7 @@ def main(args):
         article_df = article_df.merge(article_embeddings_df, left_on='id', right_on='id')
         article_df = article_df[['title', 'text', 'publish_date', 'url', 'embedding']]
 
-        article_df.to_csv(article_path.replace('news2vec_features', '0713_21_news2vec_embeds'))
+        article_df.to_csv(article_embed_path)
 
 if __name__ == '__main__':
 

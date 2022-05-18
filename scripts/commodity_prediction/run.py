@@ -127,7 +127,11 @@ class AttnDecoderRNN(torch.nn.Module):
 
         output = torch.nn.functional.relu(output)
         output = self.dropout(output)
+
         output, hidden = self.gru(output.unsqueeze(1), hidden)
+
+        output = torch.nn.functional.relu(output)
+        output = self.dropout(output)
 
         output = self.out(output).squeeze(2).squeeze(1)
         return output, hidden, attn_weights
@@ -158,12 +162,13 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
 
     else:
         # Without teacher forcing: use its own predictions as the next input
+        decoder_input = inputs[:, 0]
         for idx in range(target_length):
             decoder_output, decoder_hidden, decoder_attention = decoder(
                 decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
             
             if idx < days_ahead:
-                decoder_input = inputs[:, idx]
+                decoder_input = inputs[:, idx+1]
             else:
                 decoder_input = decoder_output.detach() # detach from history as input
 
@@ -173,7 +178,7 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
 
 def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, seq_len):
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
     criterion = torch.nn.MSELoss()
     model.train()
@@ -235,9 +240,10 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
 
         # early stopping
         if epochs_since_best > EARLY_STOPPING_PATIENCE:
+            print(f"Best Val Loss: {min_val_loss:.4f}")
             break
 
-        print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
+        print(f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
 def test_model(encoder_outputs, attention_mask, target_tensor, decoder, criterion, device, days_ahead):
     
@@ -309,22 +315,24 @@ def load_data(commodity, embed_suffix, batch_size, days_ahead, seq_len):
     return train_dataloader, val_dataloader, test_dataloader, dataset.embedding_size
 
 def main(args):
-    train_data, val_data, test_data, embedding_size = load_data(args.commodity, args.embed_suffix, args.batch_size, args.days_ahead, args.seq_len)
+    seq_len = 50
+    hidden_size = 5
+
+    train_data, val_data, test_data, embedding_size = load_data(args.commodity, args.embed_suffix, args.batch_size, args.days_ahead, seq_len)
 
     if not os.path.exists(os.path.dirname(args.checkpoint_path)):
         os.makedirs(os.path.dirname(args.checkpoint_path))
 
     embedding_size = embedding_size
-    hidden_size = 4
     model = AttnDecoderRNN(embedding_size, hidden_size)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
 
     if args.mode == 'train':
-        train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead, args.seq_len)
+        train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead, seq_len)
     elif args.mode == 'test':
-        test(model, test_data, device, args.checkpoint_path, args.days_ahead, args.seq_len)
+        test(model, test_data, device, args.checkpoint_path, args.days_ahead, seq_len)
 
 if __name__ == '__main__':
 
@@ -336,7 +344,6 @@ if __name__ == '__main__':
     parser.add_argument('--resume')
     parser.add_argument('--checkpoint-path')
     parser.add_argument('--days-ahead', type=int, default=1)
-    parser.add_argument('--seq-len', type=int, default=100)
     args = parser.parse_args()
 
     main(args)

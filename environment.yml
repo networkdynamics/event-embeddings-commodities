@@ -9,3 +9,4 @@ dependencies:
   - pip
   - pip:
     - -e /home/ndg/users/bsteel2/repos/seldonite/.
+    - info-nce-pytorch
