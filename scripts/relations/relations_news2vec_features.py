@@ -13,7 +13,8 @@ def main():
     tfidf_path = os.path.join(data_path, 'tfidf', 'all_articles')
     embedding_path = os.path.join(data_path, 'embeddings', '0713_21_articles.emb')
     
-    countries = ['United Kingdom', 'Canada', 'China', 'Cuba', 'France', 'Germany', 'Iran', 'Iraq', 'Japan', 'Mexico', 'Russia', 'Spain', 'United States', 'Vietnam']
+    #countries = ['United Kingdom', 'Canada', 'China', 'Cuba', 'France', 'Germany', 'Iran', 'Iraq', 'Japan', 'Mexico', 'Russia', 'Spain', 'United States', 'Vietnam']
+    countries = ['Afghanistan', 'Vietnam']
 
     spark_manager = None
     for country in countries:

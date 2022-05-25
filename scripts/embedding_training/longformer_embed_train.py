@@ -1,7 +1,9 @@
 import argparse
 import os
 import random
+from tkinter.tix import MAX
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 import torch
@@ -10,48 +12,139 @@ import tqdm
 
 import info_nce
 
-TEACHER_FORCING_RATIO = 0.5
 MAX_EPOCHS = 10000
 EARLY_STOPPING_PATIENCE = 25
-SEQUENCE_LENGTH = 100
+MAX_TOKENS = 800
+NUM_NEGATIVE = 5
+END_STRING_TOKEN_ID = 2
 
+
+def get_triplet_ids(graph, node_ids):
+    triplets = []
+    for node_id in tqdm.tqdm(node_ids):
+
+        if not graph.has_node(node_id):
+            continue
+
+        edges = graph.edges(node_id, data=True)
+        neighbours = np.zeros(len(edges), dtype=int)
+        neighbour_weights = np.zeros(len(edges))
+        for id, (_, neighbour_id, attrs) in enumerate(edges):
+            neighbours[id] = neighbour_id
+            neighbour_weights[id] = attrs['weight']
+        neighbour_weights = neighbour_weights / sum(neighbour_weights)
+        word_id = np.random.choice(a=neighbours, p=neighbour_weights)
+
+        next_edges = graph.edges(word_id, data=True)
+        next_edges = [edge for edge in next_edges if edge[1] != node_id]
+        neighbour_neighbours = np.zeros(len(next_edges), dtype=int)
+        neighbour_neighbour_weights = np.zeros(len(next_edges))
+        for id, (_, neighbour_id, attrs) in enumerate(next_edges):
+            neighbour_neighbours[id] = neighbour_id
+            neighbour_neighbour_weights[id] = attrs['weight']
+        neighbour_neighbour_weights = neighbour_neighbour_weights / sum(neighbour_neighbour_weights)
+
+        positive_id = np.random.choice(a=neighbour_neighbours, p=neighbour_neighbour_weights)
+
+        neighbour_set = set(neighbours)
+        negative_ids = []
+        MAX_TRIES = NUM_NEGATIVE * 3
+        tries = 0
+        while len(negative_ids) < NUM_NEGATIVE and tries < MAX_TRIES:
+            tries += 1
+            negative_id = random.choice(node_ids)
+            if negative_id == node_id:
+                continue
+            if not graph.has_node(negative_id):
+                continue
+
+            negative_neighbours = set(graph.neighbors(negative_id))
+            if neighbour_set.isdisjoint(negative_neighbours):
+                negative_ids.append(negative_id)
+
+        if len(negative_ids) != NUM_NEGATIVE:
+            continue
+
+        triplets.append({'anchor_id': node_id, 'positive_id': positive_id, 'negative_ids': negative_ids, 'word_id': word_id})
+
+    return triplets
 
 class ArticleGraphDataset(torch.utils.data.Dataset):
     def __init__(self, dataset_dir):
 
-        dataset_files = os.listdir(dataset_dir)
-        for edge_file in [dataset_file for dataset_file in dataset_files if 'edgelist' in dataset_file]:    
-            print(f"Loading graph from file {edge_file}")
+        dataset_path = os.path.join(dataset_dir, 'dataset.pt')
+        if not os.path.exists(dataset_path):
+            tokenizer = transformers.LongformerTokenizerFast.from_pretrained("allenai/longformer-base-4096")
 
-            edge_filepath = os.path.join(dataset_dir, edge_file)
-            nx_G = read_graph(edge_filepath)
-            G = random_walks.Graph(nx_G, args.directed, args.p, args.q)
-            print("Preprocess transition probabilities")
-            G.preprocess_transition_probs()
-            print("Simulate walks")
-            triplets = get_triplets(args.num_walks, args.walk_length)
-            
-            print("Map news")
-            map_filepath = edge_filepath.replace("edges.csv", "_articles.csv")
-            article_walks = map_news(walks, map_filepath)
+            triplets = []
 
-            all_article_walks += article_walks
+            dataset_files = os.listdir(dataset_dir)
+            for edge_file in [dataset_file for dataset_file in dataset_files if 'edges' in dataset_file]:    
+                print(f"Loading graph from file {edge_file}")
 
-        self.df = df
+                edge_filepath = os.path.join(dataset_dir, edge_file)
+                edges_df = pd.read_csv(edge_filepath)
+                graph = nx.from_pandas_edgelist(edges_df, source='id1', target='id2', edge_attr='weight')
+
+                article_filepath = edge_filepath.replace("edges.csv", "articles.csv")
+                article_df = pd.read_csv(article_filepath)
+
+                word_filepath = edge_filepath.replace("edges.csv", "words.csv")
+                word_df = pd.read_csv(word_filepath)
+
+                article_features = {}
+                for index, row in article_df.iterrows():
+                    id = row['id']
+                    title = row['title']
+                    text = row['text']
+                    all_text = title + '. ' + text
+                    title_tokenized = tokenizer(title)
+                    tokenized = tokenizer(all_text, padding='max_length', truncation=True, max_length=MAX_TOKENS)
+
+                    # add global attention on headline
+                    tokenized['global_attention_mask'] = [0] * len(tokenized['attention_mask'])
+                    for idx, input_id in enumerate(title_tokenized['input_ids']):
+                        if idx == 0:
+                            continue
+                        if input_id == END_STRING_TOKEN_ID:
+                            break
+                        tokenized['global_attention_mask'][idx] = 1
+
+                    article_features[id] = tokenized
+
+                node_ids = article_df['id'].values.tolist()
+                print("Generating triplets")
+                triplet_ids = get_triplet_ids(graph, node_ids)
+                
+                for triplet_id in triplet_ids:
+
+                    word = word_df[word_df['id'] == triplet_id['word_id']]['word'].values[0]
+
+                    triplet = {
+                        'anchor_ids': torch.tensor(article_features[triplet_id['anchor_id']].input_ids),
+                        'anchor_attention_mask': torch.tensor(article_features[triplet_id['anchor_id']].attention_mask),
+                        'anchor_global_attention_mask': torch.tensor(article_features[triplet_id['anchor_id']].global_attention_mask),
+                        'positive_ids': torch.tensor(article_features[triplet_id['positive_id']].input_ids),
+                        'positive_attention_mask': torch.tensor(article_features[triplet_id['positive_id']].input_ids),
+                        'positive_global_attention_mask': torch.tensor(article_features[triplet_id['positive_id']].global_attention_mask)
+                    }
+                    triplet['negative_ids'] = torch.stack([torch.tensor(article_features[negative_id].input_ids) for negative_id in triplet_id['negative_ids']])
+                    triplet['negative_attention_mask'] = torch.stack([torch.tensor(article_features[negative_id].attention_mask) for negative_id in triplet_id['negative_ids']])
+                    triplet['negative_global_attention_mask'] = torch.stack([torch.tensor(article_features[negative_id].global_attention_mask) for negative_id in triplet_id['negative_ids']])
+
+                    triplets.append(triplet)
+
+            self.triplets = triplets
+            torch.save(self.triplets, dataset_path)
+
+        else:
+            self.triplets = torch.load(dataset_path)
 
     def __len__(self):
-        return 0
+        return len(self.triplets)
 
     def __getitem__(self, idx):
-        sequence = self.df.iloc[idx:idx+self.seq_len]
-
-        data_seq = {
-            'inputs': torch.tensor(sequence['last_close'].values).float(), 
-            'targets': torch.tensor(sequence['close'].values).float(), 
-            'encoder_outputs': torch.tensor(np.stack(sequence['padded_embedding'].values)).float(),
-            'attention_mask': torch.tensor(np.stack(sequence['attention_mask'].values)).float()
-        }
-        return data_seq
+        return self.triplets[idx]
 
 
 class LongformerEmbed(torch.nn.Module):
@@ -66,9 +159,9 @@ class LongformerEmbed(torch.nn.Module):
         self.dropout = torch.nn.Dropout(self.dropout_p)
         self.out_proj = torch.nn.Linear(hidden_size, embedding_size)
 
-    def forward(self, input_ids, attention_mask):
+    def forward(self, input_ids, attention_mask, global_attention_mask):
 
-        outputs = self.model(input_ids, attention_mask=attention_mask)
+        outputs = self.model(input_ids, attention_mask=attention_mask, global_attention_mask=global_attention_mask)
         hidden_states = outputs.last_hidden_state
         hidden_states = hidden_states[:, 0, :]  # take <s> token (equiv. to [CLS])
         hidden_states = self.dropout(hidden_states)
@@ -98,22 +191,25 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
         train_loss = 0
         progress_bar_data = tqdm.tqdm(enumerate(train_data), total=len(train_data))
         for batch_idx, batch in progress_bar_data:
-            input_ids = batch['input_ids'].to(device)
-            input_attention_masks = batch['input_attention_mask'].to(device)
-            target_ids = batch['target_ids'].to(device)
-            target_attention_masks = batch['target_attention_mask'].to(device)
+            anchor_ids = batch['anchor_ids'].to(device)
+            anchor_attention_masks = batch['anchor_attention_mask'].to(device)
+            anchor_global_attention_masks = batch['anchor_global_attention_mask'].to(device)
+            positive_ids = batch['positive_ids'].to(device)
+            positive_attention_masks = batch['positive_attention_mask'].to(device)
+            positive_global_attention_masks = batch['positive_global_attention_mask'].to(device)
             negative_ids = batch['negative_ids'].to(device)
             negative_attention_masks = batch['negative_attention_mask'].to(device)
+            negative_global_attention_masks = batch['negative_global_attention_mask'].to(device)
             
             optimizer.zero_grad()
-            input_embed = model(input_ids, input_attention_masks)
-            target_embed = model(target_ids, target_attention_masks)
+            input_embed = model(anchor_ids, anchor_attention_masks, anchor_global_attention_masks)
+            positive_embed = model(positive_ids, positive_attention_masks, positive_global_attention_masks)
 
             # TODO reshape
-            negative_embed = model(negative_ids, negative_attention_masks)
+            negative_embed = model(negative_ids, negative_attention_masks, negative_global_attention_masks)
             # TODO reshape back
 
-            loss = criterion(input_embed, target_embed, negative_embed)
+            loss = criterion(input_embed, positive_embed, negative_embed)
 
             loss.backward()
             optimizer.step()
@@ -144,50 +240,39 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
         print(f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}")
 
 
-def load_data(commodity, embed_suffix, batch_size, days_ahead, seq_len):
-    dataset = CommodityDataset(commodity, embed_suffix, days_ahead, seq_len)
+def load_data(dataset_path, batch_size):
+    dataset = ArticleGraphDataset(dataset_path)
 
-    train_size = int(0.8 * len(dataset))
-    val_size = int(0.1 * len(dataset))
-    test_size = len(dataset) - train_size - val_size
     indices = list(range(len(dataset)))
-    
-    train_dataset = torch.utils.data.Subset(dataset, indices[:train_size])
-    val_dataset = torch.utils.data.Subset(dataset, indices[train_size:train_size + val_size])
-    test_dataset = torch.utils.data.Subset(dataset, indices[-test_size:])
+    train_dataset = torch.utils.data.Subset(dataset, indices[:])
 
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
-    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size)
-    test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
 
-    return train_dataloader, val_dataloader, test_dataloader, dataset.embedding_size
+    return train_dataloader
 
 def main(args):
-    seq_len = 100
-    hidden_size = 4
 
-    train_data, val_data, test_data, embedding_size = load_data(args.commodity, args.embed_suffix, args.batch_size, args.days_ahead, seq_len)
+    train_data = load_data(args.dataset_path, args.batch_size)
 
     if not os.path.exists(os.path.dirname(args.checkpoint_path)):
         os.makedirs(os.path.dirname(args.checkpoint_path))
 
-    embedding_size = embedding_size
-    model = AttnDecoderRNN(embedding_size, hidden_size)
+    embedding_size = args.embed_size
+    model = LongformerEmbed(embedding_size)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
 
-    train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead, seq_len)
+    train(model, train_data, device, args.checkpoint_path, args.resume)
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset-path')
     parser.add_argument('--batch-size', type=int)
-    parser.add_argument('--commodity')
-    parser.add_argument('--embed-suffix')
-    parser.add_argument('--resume')
+    parser.add_argument('--resume', type=bool, default=False)
+    parser.add_argument('--embed-size', type=int, default=128)
     parser.add_argument('--checkpoint-path')
-    parser.add_argument('--days-ahead', type=int, default=1)
     args = parser.parse_args()
 
     main(args)

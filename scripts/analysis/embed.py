@@ -25,7 +25,7 @@ def accumulate_embeddings(df, embeddings_df, feature_cols, len_embed, feature_va
 
 def main(args):
     
-    embedding_file_name = os.path.basename(args.embeddings)
+    embedding_file_name = os.path.basename(args.embeddings).replace('.csv', '')
     embeddings_df = pd.read_csv(args.embeddings)
 
     # sort out columns
