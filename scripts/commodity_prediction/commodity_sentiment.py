@@ -4,6 +4,7 @@ import re
 import nltk
 from NewsSentiment import TargetSentimentClassifier
 import pandas as pd
+from tqdm import tqdm
 
 COMMODITIES = {
     'brent_crude_oil': ['oil', 'crude', 'brent'],
@@ -48,7 +49,8 @@ class CommoditySentiment:
             if match:
                 break
         else:
-            print(f"Keywords: {keywords} not found in text: {txt}")
+            return None
+
 
         left = txt[:match.start()]
         centre = txt[match.start():match.end()]
@@ -83,6 +85,8 @@ def main():
     if not os.path.exists(data_path):
         os.mkdir(data_path)
 
+    tqdm.pandas()
+
     for commodity in COMMODITIES:
         csv_path = os.path.join(data_path, 'commodity_data', f"{commodity}_articles.csv")
         
@@ -91,7 +95,7 @@ def main():
         articles_df = pd.read_csv(csv_path)
 
         articles_df['all_text'] = articles_df[['title', 'text']].agg('. '.join, axis=1)
-        articles_df['sentiment'] = articles_df['all_text'].apply(classifier.get_sentiment)
+        articles_df['sentiment'] = articles_df['all_text'].progress_apply(classifier.get_sentiment)
         articles_df = articles_df[articles_df['sentiment'].notnull()]
 
         out_path = os.path.join(data_path, 'commodity_data', f"{commodity}_sentiment.csv")
