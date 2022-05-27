@@ -1,11 +1,17 @@
 name: state_of_political_events
 channels:
   - conda-forge
+  - pytorch
+  - huggingface
 dependencies:
   - python=3.8
   - pandas
   - matplotlib
   - networkx
+  - transformers
+  - pytorch
   - pip
   - pip:
     - -e /home/ndg/users/bsteel2/repos/seldonite/.
+    - info-nce-pytorch
+    - NewsSentiment
