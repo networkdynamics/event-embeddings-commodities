@@ -16,7 +16,7 @@ SEQUENCE_LENGTH = 100
 
 
 class CommodityDataset(torch.utils.data.Dataset):
-    def __init__(self, commodity, embed_suffix, days_ahead, seq_len):
+    def __init__(self, commodity, suffix, days_ahead, seq_len):
 
         self.days_ahead = days_ahead
         self.seq_len = seq_len
@@ -25,7 +25,7 @@ class CommodityDataset(torch.utils.data.Dataset):
         commodity_dir = os.path.join(this_dir_path, '..', '..', 'data', 'commodity_data')
 
         commodity_price_path = os.path.join(commodity_dir, f"{commodity}.csv")
-        commodity_article_path = os.path.join(commodity_dir, f"{commodity}_{embed_suffix}.csv")
+        commodity_article_path = os.path.join(commodity_dir, f"{commodity}_{suffix}.csv")
         price_df = pd.read_csv(commodity_price_path)
         price_df = price_df.rename(columns={'Date': 'date', 'Close': 'close'})
         price_df = price_df[['date', 'close']]
@@ -38,11 +38,19 @@ class CommodityDataset(torch.utils.data.Dataset):
 
 
         article_df = pd.read_csv(commodity_article_path)
-        article_df = article_df[['title', 'publish_date', 'embedding']]
-        article_df['publish_date'] = pd.to_datetime(article_df['publish_date'])
-        article_df['embedding'] = article_df['embedding'].str.strip('[]').apply(lambda x: np.fromstring(x, sep=' '))
 
-        self.embedding_size = len(article_df['embedding'].iloc[0])
+        self.feature = [feat_type for feat_type in ['sentiment', 'embedding'] if feat_type in article_df.columns][0]
+
+        article_df = article_df[['title', 'publish_date', self.feature]]
+        article_df['publish_date'] = pd.to_datetime(article_df['publish_date'])
+    
+        if self.feature == 'embedding':
+            article_df['embedding'] = article_df['embedding'].str.strip('[]').apply(lambda x: np.fromstring(x, sep=' '))
+            self.feature_size = len(article_df['embedding'].iloc[0])
+
+        elif self.feature == 'sentiment':
+            article_df['sentiment'] = article_df['sentiment'].apply(lambda x: np.array([x]))
+            self.feature_size = 1
 
         # group articles by day
         article_df = article_df.groupby('publish_date').agg(list).reset_index()
@@ -52,7 +60,7 @@ class CommodityDataset(torch.utils.data.Dataset):
         df_merge = df_merge.query('publish_date > last_date and publish_date <= date')
         df = price_df.merge(df_merge, on=['last_date','date'], how='left')
         df = df.rename(columns={'close_x': 'close'})
-        df = df[['date', 'close', 'title', 'embedding']]
+        df = df[['date', 'close', 'title', self.feature]]
         df = df.groupby(['date', 'close']).agg(sum).reset_index()
 
         # normalize price
@@ -61,24 +69,24 @@ class CommodityDataset(torch.utils.data.Dataset):
         df = df.iloc[self.days_ahead:]
 
         # perform padding
-        max_articles = df[df['embedding'] != 0]['embedding'].apply(len).max()
+        max_articles = df[df[self.feature] != 0][self.feature].apply(len).max()
 
-        def pad_embeddings(embeddings):
-            padded = np.zeros((max_articles, self.embedding_size), dtype=float)
-            if embeddings != 0:
-                for idx in range(len(embeddings)):
-                    padded[idx,:] = embeddings[idx][:]
+        def pad_features(features):
+            padded = np.zeros((max_articles, self.feature_size), dtype=float)
+            if features != 0:
+                for idx in range(len(features)):
+                    padded[idx,:] = features[idx][:]
             return padded
 
 
-        def create_attention_mask(embeddings):
+        def create_attention_mask(features):
             attention_mask = np.zeros((max_articles,), dtype=int)
-            if embeddings != 0:
-                attention_mask[:len(embeddings)] = 1
+            if features != 0:
+                attention_mask[:len(features)] = 1
             return attention_mask
 
-        df['padded_embedding'] = df['embedding'].apply(pad_embeddings)
-        df['attention_mask'] = df['embedding'].apply(create_attention_mask)
+        df[f'padded_{self.feature}'] = df[self.feature].apply(pad_features)
+        df['attention_mask'] = df[self.feature].apply(create_attention_mask)
 
         self.df = df
 
@@ -91,21 +99,21 @@ class CommodityDataset(torch.utils.data.Dataset):
         data_seq = {
             'inputs': torch.tensor(sequence['last_close'].values).float(), 
             'targets': torch.tensor(sequence['close'].values).float(), 
-            'encoder_outputs': torch.tensor(np.stack(sequence['padded_embedding'].values)).float(),
+            'encoder_outputs': torch.tensor(np.stack(sequence[f'padded_{self.feature}'].values)).float(),
             'attention_mask': torch.tensor(np.stack(sequence['attention_mask'].values)).float()
         }
         return data_seq
 
 
 class AttnDecoderRNN(torch.nn.Module):
-    def __init__(self, embedding_size, hidden_size, combine='attn', dropout_p=0.1):
+    def __init__(self, feature_size, hidden_size, combine='attn', dropout_p=0.1):
         super().__init__()
         self.hidden_size = hidden_size
         self.combine = combine
         self.dropout_p = dropout_p
 
-        self.attn = torch.nn.Linear(embedding_size + hidden_size + 1, 1)
-        self.attn_combine = torch.nn.Linear(embedding_size + 1, hidden_size)
+        self.attn = torch.nn.Linear(feature_size + hidden_size + 1, 1)
+        self.attn_combine = torch.nn.Linear(feature_size + 1, hidden_size)
         self.dropout = torch.nn.Dropout(self.dropout_p)
         self.gru = torch.nn.GRU(self.hidden_size, self.hidden_size, batch_first=True)
         self.out = torch.nn.Linear(self.hidden_size, 1)
@@ -296,8 +304,8 @@ def test(model, test_data, device, checkpoint_path, days_ahead, seq_len):
         
     test_loss /= len(test_data)
 
-def load_data(commodity, embed_suffix, batch_size, days_ahead, seq_len):
-    dataset = CommodityDataset(commodity, embed_suffix, days_ahead, seq_len)
+def load_data(commodity, suffix, batch_size, days_ahead, seq_len):
+    dataset = CommodityDataset(commodity, suffix, days_ahead, seq_len)
 
     train_size = int(0.8 * len(dataset))
     val_size = int(0.1 * len(dataset))
@@ -312,19 +320,18 @@ def load_data(commodity, embed_suffix, batch_size, days_ahead, seq_len):
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
 
-    return train_dataloader, val_dataloader, test_dataloader, dataset.embedding_size
+    return train_dataloader, val_dataloader, test_dataloader, dataset.feature_size
 
 def main(args):
     seq_len = 50
     hidden_size = 5
 
-    train_data, val_data, test_data, embedding_size = load_data(args.commodity, args.embed_suffix, args.batch_size, args.days_ahead, seq_len)
+    train_data, val_data, test_data, feature_size = load_data(args.commodity, args.suffix, args.batch_size, args.days_ahead, seq_len)
 
     if not os.path.exists(os.path.dirname(args.checkpoint_path)):
         os.makedirs(os.path.dirname(args.checkpoint_path))
 
-    embedding_size = embedding_size
-    model = AttnDecoderRNN(embedding_size, hidden_size)
+    model = AttnDecoderRNN(feature_size, hidden_size)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
@@ -339,7 +346,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch-size', type=int)
     parser.add_argument('--commodity')
-    parser.add_argument('--embed-suffix')
+    parser.add_argument('--suffix')
     parser.add_argument('--mode')
     parser.add_argument('--resume')
     parser.add_argument('--checkpoint-path')

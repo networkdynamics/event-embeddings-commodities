@@ -33,13 +33,12 @@ def main():
     for article_embed_path in article_embed_paths:
         print(f"Getting index for {os.path.basename(article_embed_path)}")
         df = pd.read_csv(article_embed_path)
-        df = df[['publish_date', 'embedding']]
+        df = df[['publish_date', 'title', 'embedding']]
         df['publish_date'] = pd.to_datetime(df['publish_date'])
         df['embedding'] = df['embedding'].str.strip('[]').apply(lambda x: np.fromstring(x, sep=' '))
         df['index'] = df['embedding'].apply(lambda embed: np.dot(embed - vec_origin, vec_norm) / np.linalg.norm(vec_norm))
-        df = df[['publish_date', 'index']]
-        df = df.groupby('publish_date').describe()
-        df.to_csv(article_embed_path.replace('0521_news2vec_embeds', 'war_peace_axis'))
+        df = df[['publish_date', 'title', 'index']]
+        df.to_csv(article_embed_path.replace('0521_news2vec_embeds', 'war_peace_axis'), index=False)
 
 
 if __name__ == '__main__':

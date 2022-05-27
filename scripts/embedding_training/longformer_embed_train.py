@@ -146,6 +146,8 @@ class ArticleGraphDataset(torch.utils.data.Dataset):
             new_cum_length = len(triplets) + self.cum_lengths[-1] if self.cum_lengths else len(triplets)
             self.cum_lengths.append(new_cum_length)
 
+        self.current_processed_path = None
+
     def __len__(self):
         if not self.cum_lengths:
             for processed_path in self.processed_paths:
@@ -156,7 +158,7 @@ class ArticleGraphDataset(torch.utils.data.Dataset):
         return self.cum_lengths[-1]
 
     def __getitem__(self, idx):
-        for path_idx, start_chunk, end_chunk in enumerate(zip([0] + self.cum_lengths[:-1], self.cum_lengths)):
+        for path_idx, (start_chunk, end_chunk) in enumerate(zip([0] + self.cum_lengths[:-1], self.cum_lengths)):
             if idx >= start_chunk and idx < end_chunk:
                 processed_path = self.processed_paths[path_idx]
                 break
@@ -191,7 +193,15 @@ class LongformerEmbed(torch.nn.Module):
 
         self.model = transformers.LongformerModel.from_pretrained("allenai/longformer-base-4096")
 
-        self.dense = torch.nn.Linear(hidden_size, hidden_size)
+        for param in self.model.embeddings.parameters():
+            param.requires_grad = False
+
+        for param in self.model.encoder.layer[:-1].parameters():
+            param.requires_grad = False
+
+        model_hidden_size = self.model.config.hidden_size
+
+        self.dense = torch.nn.Linear(model_hidden_size, hidden_size)
         self.dropout = torch.nn.Dropout(self.dropout_p)
         self.out_proj = torch.nn.Linear(hidden_size, embedding_size)
 
@@ -208,7 +218,7 @@ class LongformerEmbed(torch.nn.Module):
         return output
 
 
-def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, seq_len):
+def train(model, data, device, checkpoint_path, resume):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
@@ -225,7 +235,7 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
 
         # train on training set
         train_loss = 0
-        progress_bar_data = tqdm.tqdm(enumerate(train_data), total=len(train_data))
+        progress_bar_data = tqdm.tqdm(enumerate(data), total=len(data))
         for batch_idx, batch in progress_bar_data:
             anchor_ids = batch['anchor_ids'].to(device)
             anchor_attention_masks = batch['anchor_attention_mask'].to(device)
@@ -254,7 +264,7 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
             progress_bar_data.set_description(f"Current Loss: {batch_loss:.4f}")
             train_loss += batch_loss
         
-        train_loss /= len(train_data)
+        train_loss /= len(data)
 
         # potentially update learning rate
         scheduler.step(train_loss)
@@ -280,10 +290,10 @@ def load_data(dataset_path, batch_size):
     dataset = ArticleGraphDataset(dataset_path)
 
     indices = list(range(len(dataset)))
-    dataset = torch.utils.data.Subset(dataset, indices[:])
+    subset = torch.utils.data.Subset(dataset, indices[:])
 
-    sampler = ChunkSampler(dataset)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=sampler)
+    sampler = ChunkSampler(dataset.cum_lengths)
+    dataloader = torch.utils.data.DataLoader(subset, batch_size=batch_size, sampler=sampler)
 
     return dataloader
 
@@ -295,7 +305,7 @@ def main(args):
         os.makedirs(os.path.dirname(args.checkpoint_path))
 
     embedding_size = args.embed_size
-    model = LongformerEmbed(embedding_size)
+    model = LongformerEmbed(embedding_size, embedding_size*2)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
@@ -306,7 +316,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset-path')
-    parser.add_argument('--batch-size', type=int)
+    parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--resume', type=bool, default=False)
     parser.add_argument('--embed-size', type=int, default=128)
     parser.add_argument('--checkpoint-path')
