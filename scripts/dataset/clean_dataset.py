@@ -20,7 +20,8 @@ def main():
     mongo_source = sources.news.MongoDB(db_connection_string, db_name, db_table_in, partition_size_mb=64)
 
     collector = collect.Collector(mongo_source)
-    collector.distinct()
+    #collector.distinct()
+    collector.in_language(lang='en')
 
     runner = run.Runner(collector, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)
     runner.send_to_database(db_connection_string, db_name, db_table_out)
