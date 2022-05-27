@@ -8,9 +8,9 @@ def main():
 
     spark_conf = {
         'spark.kubernetes.authenticate.driver.serviceAccountName': 'ben-dev',
-        'spark.kubernetes.driver.pod.name': 'seldonite-driver-2',
-        'spark.driver.host': 'seldonite-driver-2',
-        'spark.driver.port': '7080'
+        'spark.kubernetes.driver.pod.name': 'seldonite-driver',
+        'spark.driver.host': 'seldonite-driver',
+        'spark.driver.port': '7078'
     }
 
     db_name = 'political_events'
@@ -31,7 +31,7 @@ def main():
         .top_tfidf(20, save_path=out_path)
     
     runner = run.Runner(nl_processor, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/miniconda3/envs/seldonite/bin/python')
-    #runner = run.Runner(collector, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)
+    #runner = run.Runner(nl_processor, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)
     runner.run()
 
 
