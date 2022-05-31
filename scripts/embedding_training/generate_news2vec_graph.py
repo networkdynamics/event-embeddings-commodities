@@ -23,16 +23,20 @@ def main():
     #}
 
     db_name = 'political_events'
-    db_table_in = 'reuters_news_reduced'
+    db_table_in = 'reuters_news'
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_path = os.path.join(this_dir_path, '..', 'data')
+    data_path = os.path.join(this_dir_path, '..', '..', 'data', 'news_graphs')
 
     if not os.path.exists(data_path):
         os.mkdir(data_path)
 
-    first_year = 2019
-    last_year = 2020
+    tfidf_path = os.path.join('/root', 'tfidf', 'all_articles')
+
+    spark_manager = None
+
+    first_year = 2020
+    last_year = 2022
     for year in range(first_year, last_year):
         print(f"Starting year {year}")
         mongo_source = sources.news.MongoDB(db_connection_string, db_name, db_table_in, partition_size_mb=16)
@@ -42,17 +46,21 @@ def main():
         end_date = datetime.date(year + 1, 1, 1)
         
         collector = collect.Collector(mongo_source) \
-            .in_date_range(start_date, end_date)
+            .in_date_range(start_date, end_date) \
+            .sample(50000)
 
         nl_processor = nlp.NLP(collector)
-        nl_processor.top_tfidf(20)
+        nl_processor.top_tfidf(20, load_path=tfidf_path)
 
         graph_constructor = graphs.Graph(nl_processor)
         graph_constructor.build_news2vec_graph()
 
-        runner = run.Runner(graph_constructor, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf)
+        runner = run.Runner(graph_constructor, master_url=master_url, num_executors=11, executor_cores=4, executor_memory='48g', driver_memory='64g', spark_conf=spark_conf, keep_alive=True)
         #runner = run.Runner(graph_constructor, driver_cores=24, driver_memory='64g', python_executable='/home/ndg/users/bsteel2/miniconda3/envs/seldonite/bin/python')
+        if spark_manager:
+            runner.set_spark_manager(spark_manager)
         G, map_df = runner.get_obj()
+        spark_manager = runner.get_spark_manager()
         
         graph_path = os.path.join(data_path, f"{str(year)[2:]}_all_articles.edgelist")
         map_path = os.path.join(data_path, f"{str(year)[2:]}_all_article_nodes.map")
@@ -60,9 +68,6 @@ def main():
         nx.write_weighted_edgelist(G, graph_path)
         map_df.to_csv(map_path, index=False, sep=' ', header=False)
         print(f"Finished year {year}")
-
-        # let spark get its act together
-        time.sleep(360)
 
 if __name__ == '__main__':
     main()

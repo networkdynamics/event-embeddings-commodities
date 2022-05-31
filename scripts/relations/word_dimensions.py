@@ -18,11 +18,11 @@ def main():
     df['embedding'] = [np.array(embed) for embed in df[cols].values.tolist()]
     df = df[['token', 'embedding']]
     
-    high_tokens = ['war']
-    low_tokens = ['peace']
+    high_tokens = ['war', 'invasion', 'weapons']
+    low_tokens = ['peace', 'diplomacy', 'peacemaking']
 
-    high_avg_embed = df[df['token'].isin(high_tokens)][['embedding']].sum().values[0]
-    low_avg_embed = df[df['token'].isin(low_tokens)][['embedding']].sum().values[0]
+    high_avg_embed = df[df['token'].isin(high_tokens)][['embedding']]['embedding'].mean()
+    low_avg_embed = df[df['token'].isin(low_tokens)][['embedding']]['embedding'].mean()
     vec_dim = high_avg_embed - low_avg_embed
     vec_norm = vec_dim / np.linalg.norm(vec_dim)
     vec_origin = (high_avg_embed + low_avg_embed) / 2
@@ -33,13 +33,11 @@ def main():
     for article_embed_path in article_embed_paths:
         print(f"Getting index for {os.path.basename(article_embed_path)}")
         df = pd.read_csv(article_embed_path)
-        df = df[['publish_date', 'embedding']]
+        df = df[['publish_date', 'title', 'embedding']]
         df['publish_date'] = pd.to_datetime(df['publish_date'])
         df['embedding'] = df['embedding'].str.strip('[]').apply(lambda x: np.fromstring(x, sep=' '))
         df['index'] = df['embedding'].apply(lambda embed: np.dot(embed - vec_origin, vec_norm) / np.linalg.norm(vec_norm))
-        df = df[['publish_date', 'index']]
-        df = df.groupby('publish_date').describe()
-        df = df.reset_index()
+        df = df[['publish_date', 'title', 'index']]
         df.to_csv(article_embed_path.replace('0521_news2vec_embeds', 'war_peace_axis'), index=False)
 
 
