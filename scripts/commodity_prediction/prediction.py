@@ -11,7 +11,7 @@ import tqdm
 
 TEACHER_FORCING_RATIO = 0.5
 MAX_EPOCHS = 10000
-EARLY_STOPPING_PATIENCE = 25
+EARLY_STOPPING_PATIENCE = 10
 SEQUENCE_LENGTH = 100
 
 
@@ -128,7 +128,8 @@ class AttnDecoderRNN(torch.nn.Module):
             attn_weights = attn_weights.squeeze(2) * attention_mask
             attn_applied = torch.bmm(attn_weights.unsqueeze(1), encoder_outputs)
         elif self.combine == 'avg':
-            attn_applied = torch.mean(encoder_outputs, 1)
+            attn_applied = torch.mean(encoder_outputs, 1, keepdim=True)
+            attn_weights = None
 
         output = torch.cat((input.unsqueeze(1), attn_applied.squeeze(1)), 1)
         output = self.attn_combine(output)
@@ -331,7 +332,7 @@ def main(args):
     if not os.path.exists(os.path.dirname(args.checkpoint_path)):
         os.makedirs(os.path.dirname(args.checkpoint_path))
 
-    model = AttnDecoderRNN(feature_size, hidden_size)
+    model = AttnDecoderRNN(feature_size, hidden_size, combine=args.combine)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
@@ -344,7 +345,8 @@ def main(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch-size', type=int)
+    parser.add_argument('--batch-size', type=int, default=32)
+    parser.add_argument('--combine', choices=['attn', 'avg'], default='attn')
     parser.add_argument('--commodity')
     parser.add_argument('--suffix')
     parser.add_argument('--mode')
