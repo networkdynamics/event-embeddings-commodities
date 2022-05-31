@@ -39,7 +39,8 @@ def main():
         df['index'] = df['embedding'].apply(lambda embed: np.dot(embed - vec_origin, vec_norm) / np.linalg.norm(vec_norm))
         df = df[['publish_date', 'index']]
         df = df.groupby('publish_date').describe()
-        df.to_csv(article_embed_path.replace('0521_news2vec_embeds', 'war_peace_axis'))
+        df = df.reset_index()
+        df.to_csv(article_embed_path.replace('0521_news2vec_embeds', 'war_peace_axis'), index=False)
 
 
 if __name__ == '__main__':
