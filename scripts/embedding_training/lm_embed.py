@@ -278,6 +278,7 @@ class ArticleData(torch.utils.data.Dataset):
 
             article_data = {
                 'article_id': idx,
+                'text': all_text,
                 'input_ids': torch.tensor(tokenized.input_ids),
                 'attention_mask': torch.tensor(tokenized.attention_mask)
             }
@@ -303,7 +304,10 @@ def prep_articles_for_embed(articles_df, batch_size):
 
 def embed(model, data_path, batch_size, device, checkpoint_path):
 
-    article_paths = [os.path.join(data_path, file_name) for file_name in os.listdir(data_path) if 'articles' in file_name]
+    if os.path.isdir(data_path):
+        article_paths = [os.path.join(data_path, file_name) for file_name in os.listdir(data_path) if 'articles' in file_name]
+    elif os.path.isfile(data_path):
+        article_paths = [data_path]
 
     for article_path in article_paths:
 
@@ -324,6 +328,7 @@ def embed(model, data_path, batch_size, device, checkpoint_path):
         progress_bar_data = tqdm.tqdm(enumerate(dataloader), total=len(dataloader))
         for batch_idx, batch in progress_bar_data:
             article_ids = batch['article_id']
+            texts = batch['text']
             input_ids = batch['input_ids'].to(device)
             attention_masks = batch['attention_mask'].to(device)
             
@@ -332,14 +337,14 @@ def embed(model, data_path, batch_size, device, checkpoint_path):
             ids = article_ids.detach().numpy()
             embeds = input_embed.cpu().detach().numpy()
 
-            batch_embed_df = pd.DataFrame([{'id': id, 'embed': embed} for id, embed in zip(ids, embeds)])
+            batch_embed_df = pd.DataFrame([{'id': id, 'embed': embed, 'text': text} for id, embed, text in zip(ids, embeds, texts)])
             if embed_df is not None:
                 embed_df = pd.concat([embed_df, batch_embed_df])
             else:
                 embed_df = batch_embed_df
 
-        embed_df.set_index('id', drop=True)
-        article_embed_df = articles_df.join(embed_df)
+        embed_df = embed_df.set_index('id', drop=True)
+        article_embed_df = articles_df.join(embed_df, lsuffix='l_', rsuffix='r_')
         article_embed_df.to_csv(article_embed_path)
 
 

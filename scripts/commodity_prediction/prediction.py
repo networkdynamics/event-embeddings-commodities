@@ -81,8 +81,11 @@ class CommodityDataset(torch.utils.data.Dataset):
         # normalize price
         df['close'] = (df['close'] - df['close'].mean()) / df['close'].std()
         df['open'] = (df['open'] - df['open'].mean()) / df['open'].std()
-        df['target_close'] = df['close'].shift(self.days_ahead)
-        df = df.iloc[self.days_ahead:]
+        df['target_close'] = df['close'].shift(-self.days_ahead)
+        df = df.iloc[:-self.days_ahead]
+        df['previous_close'] = df['close'].shift(1)
+        df = df.iloc[1:]
+        
 
         # perform padding
         max_articles = df[df[self.feature] != 0][self.feature].apply(len).max()
@@ -113,7 +116,7 @@ class CommodityDataset(torch.utils.data.Dataset):
         sequence = self.df.iloc[idx:idx+self.seq_len]
 
         data_seq = {
-            'inputs': torch.tensor(sequence['open'].values).float(), 
+            'inputs': torch.tensor(sequence['previous_close'].values).float(), 
             'targets': torch.tensor(sequence['target_close'].values).float(), 
             'encoder_outputs': torch.tensor(np.stack(sequence[f'padded_{self.feature}'].values)).float(),
             'attention_mask': torch.tensor(np.stack(sequence['attention_mask'].values), dtype=int)
@@ -190,20 +193,24 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
     else:
         # Without teacher forcing: use its own predictions as the next input
         decoder_input = inputs[:, 0]
+        outputs = torch.zeros(targets.shape, dtype=float).to(device)
         for idx in range(target_length):
             decoder_output, decoder_hidden, decoder_attention = decoder(
                 decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
             
-            if idx + 1 < inputs.shape[1]:
-                decoder_input = inputs[:, idx+1]
-            else:
-                decoder_input = decoder_output.detach() # detach from history as input
+            outputs[idx] = decoder_output.detach() # detach from history as input
+            
+            if idx < target_length - 1:
+                if idx < days_ahead:
+                    decoder_input = inputs[:, idx+1]
+                else:
+                    decoder_input = outputs[idx - days_ahead]
 
             loss += criterion(decoder_output, targets[:,idx])
 
     return loss
 
-def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, seq_len):
+def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
@@ -272,38 +279,24 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
 
         print(f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
-def test_model(encoder_outputs, attention_mask, target_tensor, decoder, criterion, device, days_ahead):
+def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, criterion, device):
     
-    target_length = target_tensor.size(0)
+    target_length = targets.size(0)
 
     loss = 0
 
     decoder_input = torch.tensor([0], device=device)
     decoder_hidden = decoder.init_hidden()
 
-    use_teacher_forcing = random.random() < TEACHER_FORCING_RATIO
-
-    # TODO work this out for multiple days ahead forecasting
-    if use_teacher_forcing:
-        # Teacher forcing: Feed the target as the next input
-        for idx in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
-                decoder_input, decoder_hidden, encoder_outputs[idx])
-            loss += criterion(decoder_output, target_tensor[idx])
-            decoder_input = target_tensor[idx]  # Teacher forcing
-
-    else:
-        # Without teacher forcing: use its own predictions as the next input
-        for idx in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
-                decoder_input, decoder_hidden, encoder_outputs[idx])
-            decoder_input = decoder_output.detach() # detach from history as input
-
-            loss += criterion(decoder_output, target_tensor[idx])
+    for idx in range(target_length):
+        decoder_input = inputs[:, idx]  # Teacher forcing
+        decoder_output, decoder_hidden, decoder_attention = decoder(
+            decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
+        loss += criterion(decoder_output, targets[:,idx])
 
     return loss.item() / target_length
 
-def test(model, test_data, device, checkpoint_path, days_ahead, seq_len):
+def test(model, test_data, device, checkpoint_path):
 
     criterion = torch.nn.MSELoss()
     model.eval()
@@ -316,9 +309,11 @@ def test(model, test_data, device, checkpoint_path, days_ahead, seq_len):
     with torch.no_grad():
         for batch_idx, batch in progress_bar_data:
             encoder_outputs = batch['encoder_outputs'].to(device)
+            attention_masks = batch['attention_mask'].to(device)
+            inputs = batch['inputs'].to(device)
             targets = batch['targets'].to(device)
             
-            batch_loss = test_model(encoder_outputs, targets, model, criterion, device, days_ahead, seq_len)
+            batch_loss = test_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device)
             test_loss += batch_loss
         
     test_loss /= len(test_data)
@@ -355,9 +350,9 @@ def main(args):
     model = model.to(device)
 
     if args.mode == 'train':
-        train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead, args.seq_len)
+        train(model, train_data, val_data, device, args.checkpoint_path, args.resume)
     elif args.mode == 'test':
-        test(model, test_data, device, args.checkpoint_path, args.days_ahead, args.seq_len)
+        test(model, test_data, device, args.checkpoint_path)
 
 if __name__ == '__main__':
 
