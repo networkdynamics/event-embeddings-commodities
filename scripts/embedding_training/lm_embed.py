@@ -181,22 +181,24 @@ class ChunkSampler:
 
 
 class LanguageModelEmbed(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, embed_size=128):
         super().__init__()
 
-        self.model = transformers.RobertaModel.from_pretrained("distilroberta-base")
+        config = transformers.RobertaConfig.from_pretrained("distilroberta-base")
+        config.num_labels = embed_size
+        self.model = transformers.RobertaForSequenceClassification.from_pretrained("distilroberta-base", config=config)
 
-        for param in self.model.embeddings.parameters():
+        for param in self.model.roberta.embeddings.parameters():
             param.requires_grad = False
 
-        for param in self.model.encoder.layer[:-2].parameters():
+        for param in self.model.roberta.encoder.layer[:-1].parameters():
             param.requires_grad = False
 
     def forward(self, input_ids, attention_mask):
 
         outputs = self.model(input_ids, attention_mask=attention_mask)
-        hidden_state = outputs.last_hidden_state
-        hidden_state = hidden_state[:, 0, :]  # take <s> token (equiv. to [CLS])
+        hidden_state = outputs.logits
+        #hidden_state = hidden_state[:, 0, :]  # take <s> token (equiv. to [CLS])
         return hidden_state
 
 
@@ -364,7 +366,7 @@ def main(args):
     if not os.path.exists(os.path.dirname(args.checkpoint_path)):
         os.makedirs(os.path.dirname(args.checkpoint_path))
 
-    model = LanguageModelEmbed()
+    model = LanguageModelEmbed(embed_size=args.embed_size)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
@@ -380,6 +382,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', choices=['train', 'embed'], default='train')
     parser.add_argument('--dataset-path')
+    parser.add_argument('--embed-size', type=int, default=128)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--resume', type=bool, default=False)
     parser.add_argument('--checkpoint-path')

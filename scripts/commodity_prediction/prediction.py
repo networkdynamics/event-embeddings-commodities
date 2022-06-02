@@ -12,7 +12,7 @@ import tqdm
 
 TEACHER_FORCING_RATIO = 0.5
 MAX_EPOCHS = 10000
-EARLY_STOPPING_PATIENCE = 20
+EARLY_STOPPING_PATIENCE = 40
 SEQUENCE_LENGTH = 100
 
 
@@ -38,7 +38,7 @@ class CommodityDataset(torch.utils.data.Dataset):
         price_df['last_date'] = pd.to_datetime(price_df['last_date'])
 
 
-        article_df = pd.read_csv(commodity_article_path, dtype={'publish_date': str, 'title': str, 'embedding': str, 'embed': str, 'sentiment': float})
+        article_df = pd.read_csv(commodity_article_path)#, dtype={'publish_date': str, 'title': str, 'embedding': str, 'embed': str, 'sentiment': float})
 
         article_df = article_df.dropna()
 
@@ -193,18 +193,18 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
     else:
         # Without teacher forcing: use its own predictions as the next input
         decoder_input = inputs[:, 0]
-        outputs = torch.zeros(targets.shape, dtype=float).to(device)
+        outputs = torch.zeros(targets.shape).float().to(device)
         for idx in range(target_length):
             decoder_output, decoder_hidden, decoder_attention = decoder(
                 decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
             
-            outputs[idx] = decoder_output.detach() # detach from history as input
+            outputs[:, idx] = decoder_output.detach() # detach from history as input
             
             if idx < target_length - 1:
                 if idx < days_ahead:
                     decoder_input = inputs[:, idx+1]
                 else:
-                    decoder_input = outputs[idx - days_ahead]
+                    decoder_input = outputs[:, idx - days_ahead]
 
             loss += criterion(decoder_output, targets[:,idx])
 
@@ -281,12 +281,12 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
 
 def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, criterion, device):
     
-    target_length = targets.size(0)
+    batch_size = targets.shape[0]
+    target_length = targets.shape[1]
 
     loss = 0
 
-    decoder_input = torch.tensor([0], device=device)
-    decoder_hidden = decoder.init_hidden()
+    decoder_hidden = decoder.init_hidden(batch_size, device)
 
     for idx in range(target_length):
         decoder_input = inputs[:, idx]  # Teacher forcing
@@ -319,6 +319,8 @@ def test(model, test_data, device, checkpoint_path):
     test_loss /= len(test_data)
     return test_loss
 
+
+
 def load_data(commodity, suffix, batch_size, days_ahead, seq_len):
     dataset = CommodityDataset(commodity, suffix, days_ahead, seq_len)
 
@@ -350,7 +352,7 @@ def main(args):
     model = model.to(device)
 
     if args.mode == 'train':
-        train(model, train_data, val_data, device, args.checkpoint_path, args.resume)
+        train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead)
     elif args.mode == 'test':
         test(model, test_data, device, args.checkpoint_path)
 

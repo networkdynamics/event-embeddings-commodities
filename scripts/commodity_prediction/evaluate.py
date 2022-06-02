@@ -5,25 +5,6 @@ import torch
 
 import prediction
 
-COMMODITIES = [
-    'brent_crude_oil',
-    'crude_oil',
-    'natural_gas',
-    'rbob_gasoline',
-    'copper',
-    'palladium',
-    'platinum',
-    'gold',
-    'silver',
-    'corn',
-    'oat',
-    'cotton',
-    'soybean_meal',
-    'soybean_oil',
-    'soybean',
-    'sugar',
-    'wheat'
-]
 
 def main(args):
 
@@ -31,45 +12,97 @@ def main(args):
     checkpoint_path = os.path.join(this_dir_path, '..', '..', 'checkpoints', 'commodity')
 
     batch_size = 32
-    days_ahead = 30
     seq_len = 50
     resume = False
 
-    if args.type == 'sentiment':
+    if args.method == 'sentiment':
         suffix = 'sentiment'
-        hidden_size = 3
+        hidden_size = 4
         combine = 'avg'
-    elif args.type == 'news2vec':
+    elif args.method == 'news2vec':
         suffix = '0521_news2vec_embeds'
-        hidden_size = 48
+        hidden_size = 32
         combine = 'attn'
 
-    commodity_scores = {}
+    scores = {}
 
-    for commodity in COMMODITIES:
-        model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.type, 'final_model.pt')
-        train_data, val_data, test_data, feature_size = prediction.load_data(commodity, suffix, batch_size, days_ahead, seq_len)
+    if args.variable == 'commodities':
 
-        if not os.path.exists(os.path.dirname(model_checkpoint_path)):
-            os.makedirs(os.path.dirname(model_checkpoint_path))
+        days_ahead = 30
+        commodities = [
+            'brent_crude_oil',
+            'crude_oil',
+            'natural_gas',
+            'rbob_gasoline',
+            'copper',
+            'palladium',
+            'platinum',
+            'gold',
+            'silver',
+            'corn',
+            'cotton',
+            'soybean_meal',
+            'soybean_oil',
+            'soybean',
+            'sugar',
+            'wheat'
+        ]
 
-        model = prediction.AttnDecoderRNN(feature_size, hidden_size, combine=combine)
+        for commodity in commodities:
+            print(f"Testing {commodity}")
+            model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, 'final_model.pt')
+            train_data, val_data, test_data, feature_size = prediction.load_data(commodity, suffix, batch_size, days_ahead, seq_len)
 
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model = model.to(device)
+            if not os.path.exists(os.path.dirname(model_checkpoint_path)):
+                os.makedirs(os.path.dirname(model_checkpoint_path))
 
-        prediction.train(model, train_data, val_data, device, model_checkpoint_path, resume)
-        test_score = prediction.test(model, test_data, device, model_checkpoint_path)
-        score_slug = f'{test_score:.4f}'.replace('.', '_')
-        os.rename(model_checkpoint_path, model_checkpoint_path.replace('final_model', f'{score_slug}_final_model'))
-        commodity_scores[commodity] = test_score
+            model = prediction.AttnDecoderRNN(feature_size, hidden_size, combine=combine)
 
-    print(commodity_scores)
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            model = model.to(device)
+
+            prediction.train(model, train_data, val_data, device, model_checkpoint_path, resume, days_ahead)
+            test_score = prediction.test(model, test_data, device, model_checkpoint_path)
+            score_slug = f'{test_score:.4f}'.replace('.', '_')
+            os.rename(model_checkpoint_path, model_checkpoint_path.replace('final_model', f'{score_slug}_final_model'))
+            scores[commodity] = test_score
+
+    elif args.variable == 'days_ahead':
+
+        commodity = 'crude_oil'
+        day_intervals = [
+            1,
+            10,
+            30,
+            50,
+            100
+        ]
+
+        for days_ahead in day_intervals:
+            print(f"Testing {commodity}")
+            model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, 'final_model.pt')
+            train_data, val_data, test_data, feature_size = prediction.load_data(commodity, suffix, batch_size, days_ahead, seq_len)
+
+            if not os.path.exists(os.path.dirname(model_checkpoint_path)):
+                os.makedirs(os.path.dirname(model_checkpoint_path))
+
+            model = prediction.AttnDecoderRNN(feature_size, hidden_size, combine=combine)
+
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            model = model.to(device)
+
+            prediction.train(model, train_data, val_data, device, model_checkpoint_path, resume, days_ahead)
+            test_score = prediction.test(model, test_data, device, model_checkpoint_path)
+            score_slug = f'{test_score:.4f}'.replace('.', '_')
+            os.rename(model_checkpoint_path, model_checkpoint_path.replace('final_model', f'{score_slug}_final_model'))
+            scores[days_ahead] = test_score
+
+    print(scores)
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--type')
+    parser.add_argument('--method')
     args = parser.parse_args()
 
     main(args)
