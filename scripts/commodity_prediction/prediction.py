@@ -116,6 +116,7 @@ class CommodityDataset(torch.utils.data.Dataset):
         sequence = self.df.iloc[idx:idx+self.seq_len]
 
         data_seq = {
+            'index': torch.tensor(sequence.index.values),
             'inputs': torch.tensor(sequence['previous_close'].values).float(), 
             'targets': torch.tensor(sequence['target_close'].values).float(), 
             'encoder_outputs': torch.tensor(np.stack(sequence[f'padded_{self.feature}'].values)).float(),

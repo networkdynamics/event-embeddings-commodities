@@ -17,11 +17,15 @@ def main(args):
 
     if args.method == 'sentiment':
         suffix = 'sentiment'
-        hidden_size = 4
+        hidden_size = 8 # 3, 4
         combine = 'avg'
     elif args.method == 'news2vec':
         suffix = '0521_news2vec_embeds'
-        hidden_size = 32
+        hidden_size = 32 # 48, 64
+        combine = 'attn'
+    elif args.method == 'lm_embed':
+        suffix = 'lm_small_embed'
+        hidden_size = 64 # 48, 64
         combine = 'attn'
 
     scores = {}
@@ -103,6 +107,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--method')
+    parser.add_argument('--variable')
     args = parser.parse_args()
 
     main(args)
