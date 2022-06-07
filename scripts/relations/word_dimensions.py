@@ -18,11 +18,16 @@ def main():
     df['embedding'] = [np.array(embed) for embed in df[cols].values.tolist()]
     df = df[['token', 'embedding']]
     
-    high_tokens = ['war', 'invasion', 'weapons']
-    low_tokens = ['peace', 'diplomacy', 'peacemaking']
+    words = True
+    if words:
+        high_tokens = ['war', 'invasion', 'weapons']
+        low_tokens = ['peace', 'diplomacy', 'peacemaking']
 
-    high_avg_embed = df[df['token'].isin(high_tokens)][['embedding']]['embedding'].mean()
-    low_avg_embed = df[df['token'].isin(low_tokens)][['embedding']]['embedding'].mean()
+        high_avg_embed = df[df['token'].isin(high_tokens)]['embedding'].mean()
+        low_avg_embed = df[df['token'].isin(low_tokens)]['embedding'].mean()
+    else:
+        
+        
     vec_dim = high_avg_embed - low_avg_embed
     vec_norm = vec_dim / np.linalg.norm(vec_dim)
     vec_origin = (high_avg_embed + low_avg_embed) / 2
