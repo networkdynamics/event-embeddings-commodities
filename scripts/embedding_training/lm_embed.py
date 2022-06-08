@@ -44,7 +44,7 @@ class LanguageModelEmbed(torch.nn.Module):
 
 def train(model, data, device, checkpoint_path, resume):
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
     criterion = info_nce.InfoNCE(negative_mode='paired')
     model.train()
