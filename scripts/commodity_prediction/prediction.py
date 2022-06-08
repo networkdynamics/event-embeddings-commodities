@@ -79,11 +79,11 @@ class CommodityDataset(torch.utils.data.Dataset):
         df = df.groupby(['date', 'open', 'close']).agg(list).reset_index()
 
         # normalize price
-        df['close'] = (df['close'] - df['close'].mean()) / df['close'].std()
-        df['open'] = (df['open'] - df['open'].mean()) / df['open'].std()
-        df['target_close'] = df['close'].shift(-self.days_ahead)
+        df['norm_close'] = (df['close'] - df['close'].mean()) / df['close'].std()
+        df['norm_open'] = (df['open'] - df['open'].mean()) / df['open'].std()
+        df['target_close'] = df['norm_close'].shift(-self.days_ahead)
         df = df.iloc[:-self.days_ahead]
-        df['previous_close'] = df['close'].shift(1)
+        df['previous_close'] = df['norm_close'].shift(1)
         df = df.iloc[1:]
         
 

@@ -1,6 +1,7 @@
 import argparse
 import os
 
+from matplotlib import pyplot as plt
 import torch
 
 import prediction
@@ -15,6 +16,7 @@ def main(args):
     seq_len = 50
 
     dataset = prediction.CommodityDataset(args.commodity, args.method, args.days_ahead, seq_len)
+    df = dataset.df
 
     train_size = int(0.8 * len(dataset))
     val_size = int(0.1 * len(dataset))
@@ -31,8 +33,13 @@ def main(args):
     model.eval()
     model.load_state_dict(torch.load(model_checkpoint_path))
 
+    close_mean = df['close'].mean()
+    close_std = df['close'].std()
+    df['predicted'] = 0
+
     with torch.no_grad():
         for batch in test_dataloader:
+            indices = batch['index']
             encoder_outputs = batch['encoder_outputs'].to(device)
             attention_masks = batch['attention_mask'].to(device)
             inputs = batch['inputs'].to(device)
@@ -46,6 +53,15 @@ def main(args):
                 decoder_input = inputs[:, idx]
                 decoder_output, decoder_hidden, decoder_attention = model(
                     decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
+
+            last_index = indices[-1]
+            final_pred = decoder_output.cpu().detach().numpy()
+            # normalize
+            df.at[last_index + args.days_ahead, 'predicted'] = (final_pred * close_std) + close_mean
+
+    # plot
+    fig, ax = plt.subplots()
+    ax.plot(df['date'], df[''])
 
 
 if __name__ == '__main__':
