@@ -12,7 +12,7 @@ import tqdm
 
 TEACHER_FORCING_RATIO = 0.5
 MAX_EPOCHS = 10000
-EARLY_STOPPING_PATIENCE = 40
+EARLY_STOPPING_PATIENCE = 100
 SEQUENCE_LENGTH = 100
 
 
@@ -213,7 +213,7 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
 
 def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead):
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
     criterion = torch.nn.MSELoss()
     model.train()
