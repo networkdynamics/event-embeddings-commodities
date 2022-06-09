@@ -52,17 +52,22 @@ def main(args):
 
     # add text
     props = {'ha': 'left', 'va': 'bottom'}
+    lower_y_lim = -3
 
     events = [
+        (datetime.date(2010, 2, 1), 'Peak of War in Afghanistan'),
         (datetime.date(2011, 3, 1), 'Libya Intervention'),
         (datetime.date(2014, 2, 1), 'Russia annexes Crimea'),
-        (datetime.date(2017, 9, 1), 'US - North Korea Tensions')
+        (datetime.date(2015, 11, 1), 'Paris attacks'),
+        (datetime.date(2017, 9, 1), 'US - North Korea Tensions'),
+        (datetime.date(2018, 4, 1), 'Syria missile strikes'),
+        (datetime.date(2019, 5, 1), 'US - Iran Tensions')
     ]
     for event in events:
-        ax.plot([event[0], event[0]], [0, 4], 'k-', lw=1, alpha=0.2)
+        ax.plot([event[0], event[0]], [lower_y_lim, 4], 'k-', lw=1, alpha=0.2)
         ax.text(event[0], 4, event[1], props, rotation=45)
     
-    ax.set_ylim([-3, 8])
+    ax.set_ylim([lower_y_lim, 8.5])
 
     plt.xticks(rotation='45')
     plt.show()
