@@ -12,12 +12,15 @@ import tqdm
 
 TEACHER_FORCING_RATIO = 0.5
 MAX_EPOCHS = 10000
-EARLY_STOPPING_PATIENCE = 100
+EARLY_STOPPING_PATIENCE = 40
 SEQUENCE_LENGTH = 100
 
 
 class CommodityDataset(torch.utils.data.Dataset):
-    def __init__(self, commodity, suffix, days_ahead, seq_len):
+    def __init__(self, commodity, suffix, days_ahead, seq_len, target='dir'):
+
+        assert target in ['price', 'diff', 'dir']
+        self.target = target
 
         self.days_ahead = days_ahead
         self.seq_len = seq_len
@@ -80,13 +83,19 @@ class CommodityDataset(torch.utils.data.Dataset):
 
         # normalize price
         df['norm_close'] = (df['close'] - df['close'].mean()) / df['close'].std()
-        df['norm_open'] = (df['open'] - df['open'].mean()) / df['open'].std()
-        df['target_close'] = df['norm_close'].shift(-self.days_ahead)
-        df = df.iloc[:-self.days_ahead]
-        df['previous_close'] = df['norm_close'].shift(1)
-        df = df.iloc[1:]
         
+        # get targets
+        df['target_close'] = df['norm_close'].shift(-self.days_ahead)
+        df['target_close_diff'] = df['norm_close'].shift(-self.days_ahead) - df['norm_close'].shift(1)
+        df['target_close_dir'] = df['target_close_diff'].apply(lambda x: 1 if x >= 0 else 0)
 
+        # day to day changes
+        self.start_nulls = 2
+        df['previous_close'] = df['norm_close'].shift(1)
+        df['previous_close_diff'] = df['norm_close'].shift(1) - df['norm_close'].shift(2)
+        df['previous_close_dir'] = df['previous_close_diff'].apply(lambda x: 1 if x >= 0 else 0)
+        self.start_nulls = 1 if self.target == 'price' else 2
+        
         # perform padding
         max_articles = df[df[self.feature] != 0][self.feature].apply(len).max()
 
@@ -110,15 +119,25 @@ class CommodityDataset(torch.utils.data.Dataset):
         self.df = df
 
     def __len__(self):
-        return len(self.df) - self.seq_len + 1
+        return len(self.df) - self.seq_len + 1 - self.start_nulls - self.days_ahead
 
     def __getitem__(self, idx):
-        sequence = self.df.iloc[idx:idx+self.seq_len]
+        sequence = self.df.iloc[idx + self.start_nulls:idx + self.start_nulls + self.seq_len]
+
+        if self.target == 'price':
+            inputs = torch.tensor(sequence['previous_close'].values).float()
+            targets = torch.tensor(sequence['target_close'].values).float()
+        elif self.target == 'diff':
+            inputs = torch.tensor(sequence['previous_close_diff'].values).float()
+            targets = torch.tensor(sequence['target_close_diff'].values).float()
+        elif self.target == 'dir':
+            inputs = torch.tensor(sequence['previous_close_dir'].values).float()
+            targets = torch.tensor(sequence['target_close_dir'].values).float()
 
         data_seq = {
             'index': torch.tensor(sequence.index.values),
-            'inputs': torch.tensor(sequence['previous_close'].values).float(), 
-            'targets': torch.tensor(sequence['target_close'].values).float(), 
+            'inputs': inputs, 
+            'targets': targets, 
             'encoder_outputs': torch.tensor(np.stack(sequence[f'padded_{self.feature}'].values)).float(),
             'attention_mask': torch.tensor(np.stack(sequence['attention_mask'].values), dtype=int)
         }
@@ -126,7 +145,7 @@ class CommodityDataset(torch.utils.data.Dataset):
 
 
 class AttnDecoderRNN(torch.nn.Module):
-    def __init__(self, feature_size, hidden_size, combine='attn', dropout_p=0.1):
+    def __init__(self, feature_size, hidden_size, combine='attn', dropout_p=0.5):
         super().__init__()
         self.hidden_size = hidden_size
         self.combine = combine
@@ -189,7 +208,7 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
             decoder_input = inputs[:, idx]  # Teacher forcing
             decoder_output, decoder_hidden, decoder_attention = decoder(
                 decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
-            loss += criterion(decoder_output, targets[:,idx])
+            loss += criterion(decoder_output.unsqueeze(-1), targets[:,idx].unsqueeze(-1))
 
     else:
         # Without teacher forcing: use its own predictions as the next input
@@ -207,15 +226,20 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
                 else:
                     decoder_input = outputs[:, idx - days_ahead]
 
-            loss += criterion(decoder_output, targets[:,idx])
+            loss += criterion(decoder_output.unsqueeze(-1), targets[:,idx].unsqueeze(-1))
 
     return loss
 
-def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead):
+def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, target):
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
-    criterion = torch.nn.MSELoss()
+
+    if target == 'price' or target == 'diff':
+        criterion = torch.nn.MSELoss()
+    else:
+        criterion = torch.nn.CrossEntropyLoss()
+
     model.train()
 
     min_val_loss = 999999
@@ -293,13 +317,17 @@ def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, crite
         decoder_input = inputs[:, idx]  # Teacher forcing
         decoder_output, decoder_hidden, decoder_attention = decoder(
             decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
-        loss += criterion(decoder_output, targets[:,idx])
+        loss += criterion(decoder_output.unsqueeze(-1), targets[:,idx].unsqueeze(-1))
 
     return loss.item() / target_length
 
-def test(model, test_data, device, checkpoint_path):
+def test(model, test_data, device, checkpoint_path, target):
 
-    criterion = torch.nn.MSELoss()
+    if target == 'price' or target == 'diff':
+        criterion = torch.nn.MSELoss()
+    else:
+        criterion = torch.nn.CrossEntropyLoss()
+
     model.eval()
 
     model.load_state_dict(torch.load(checkpoint_path))
@@ -322,11 +350,11 @@ def test(model, test_data, device, checkpoint_path):
 
 
 
-def load_data(commodity, suffix, batch_size, days_ahead, seq_len):
-    dataset = CommodityDataset(commodity, suffix, days_ahead, seq_len)
+def load_data(commodity, suffix, batch_size, days_ahead, seq_len, target):
+    dataset = CommodityDataset(commodity, suffix, days_ahead, seq_len, target)
 
-    train_size = int(0.8 * len(dataset))
-    val_size = int(0.1 * len(dataset))
+    train_size = int(0.7 * len(dataset))
+    val_size = int(0.15 * len(dataset))
     test_size = len(dataset) - train_size - val_size
     indices = list(range(len(dataset)))
     
@@ -342,7 +370,7 @@ def load_data(commodity, suffix, batch_size, days_ahead, seq_len):
 
 def main(args):
 
-    train_data, val_data, test_data, feature_size = load_data(args.commodity, args.suffix, args.batch_size, args.days_ahead, args.seq_len)
+    train_data, val_data, test_data, feature_size = load_data(args.commodity, args.suffix, args.batch_size, args.days_ahead, args.seq_len, args.target)
 
     if not os.path.exists(os.path.dirname(args.checkpoint_path)):
         os.makedirs(os.path.dirname(args.checkpoint_path))
@@ -353,9 +381,9 @@ def main(args):
     model = model.to(device)
 
     if args.mode == 'train':
-        train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead)
+        train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead, args.target)
     elif args.mode == 'test':
-        test(model, test_data, device, args.checkpoint_path)
+        test(model, test_data, device, args.checkpoint_path, args.target)
 
 if __name__ == '__main__':
 
@@ -367,6 +395,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode')
     parser.add_argument('--resume')
     parser.add_argument('--checkpoint-path')
+    parser.add_argument('--target', default='dir')
     parser.add_argument('--days-ahead', type=int, default=1)
     parser.add_argument('--seq-len', type=int, default=50)
     parser.add_argument('--hidden-size', type=int, default=5)

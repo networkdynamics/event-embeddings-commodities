@@ -297,60 +297,60 @@ class ArticleContextDataset(ChunkDataset):
                 if graph.in_degree(node) == 0:
                     continue
 
-                predecessors = get_top_n_valid_predecessors(graph, node, 1)
+                node_text = node_data['node_text']
+                tokens = tokenizer(node_text, padding='max_length', truncation=True, max_length=MAX_TOKENS)
+
+                predecessors = get_top_n_valid_predecessors(graph, node, 3)
                 if len(predecessors) == 0:
                     continue
-
-                context_node = predecessors[0]
-
-                data = {}
-
-                node_text = node_data['node_text']
-
-                tokens = tokenizer(node_text, padding='max_length', truncation=True, max_length=MAX_TOKENS)
-                data['anchor_ids'] = torch.tensor(tokens.input_ids, dtype=torch.long)
-                data['anchor_attention_mask'] = torch.tensor(tokens.attention_mask, dtype=torch.long)
-
-                context_text = graph.nodes[context_node]['node_text']
-                context_tokens = tokenizer(context_text, padding='max_length', truncation=True, max_length=MAX_TOKENS)
                 
-                data['positive_ids'] = torch.tensor(context_tokens.input_ids)
-                data['positive_attention_mask'] = torch.tensor(context_tokens.attention_mask)
+                for context_node in predecessors:
 
-                negative_nodes = []
-                max_tries = NUM_NEGATIVE * 3
-                nodes = list(graph.nodes())
-                tries = 0
-                while len(negative_nodes) < NUM_NEGATIVE and tries < max_tries:
-                    tries += 1
-                    negative_node = random.choice(nodes)
-                    if negative_node == node:
+                    data = {}
+
+                    data['anchor_ids'] = torch.tensor(tokens.input_ids, dtype=torch.long)
+                    data['anchor_attention_mask'] = torch.tensor(tokens.attention_mask, dtype=torch.long)
+
+                    context_text = graph.nodes[context_node]['node_text']
+                    context_tokens = tokenizer(context_text, padding='max_length', truncation=True, max_length=MAX_TOKENS)
+                    
+                    data['positive_ids'] = torch.tensor(context_tokens.input_ids)
+                    data['positive_attention_mask'] = torch.tensor(context_tokens.attention_mask)
+
+                    negative_nodes = []
+                    max_tries = NUM_NEGATIVE * 3
+                    nodes = list(graph.nodes())
+                    tries = 0
+                    while len(negative_nodes) < NUM_NEGATIVE and tries < max_tries:
+                        tries += 1
+                        negative_node = random.choice(nodes)
+                        if negative_node == node:
+                            continue
+
+                        if graph.has_edge(node, negative_node):
+                            continue
+
+                        if graph.has_edge(negative_node, node):
+                            continue
+
+                        negative_nodes.append(negative_node)
+
+                    if len(negative_nodes) != NUM_NEGATIVE:
                         continue
 
-                    if graph.has_edge(node, negative_node):
-                        continue
+                    negative_ids = []
+                    negative_attention_masks = []
 
-                    if graph.has_edge(negative_node, node):
-                        continue
+                    for negative_node in negative_nodes:
+                        negative_text = graph.nodes[negative_node]['node_text']
+                        negative_tokens = tokenizer(negative_text, padding='max_length', truncation=True, max_length=MAX_TOKENS)
+                        negative_ids.append(torch.tensor(negative_tokens.input_ids))
+                        negative_attention_masks.append(torch.tensor(negative_tokens.attention_mask))
 
-                    negative_nodes.append(negative_node)
-
-                if len(negative_nodes) != NUM_NEGATIVE:
-                    continue
-
-                negative_ids = []
-                negative_attention_masks = []
-
-                for negative_node in negative_nodes:
-                    negative_text = graph.nodes[negative_node]['node_text']
-                    negative_tokens = tokenizer(negative_text, padding='max_length', truncation=True, max_length=MAX_TOKENS)
-                    negative_ids.append(torch.tensor(negative_tokens.input_ids))
-                    negative_attention_masks.append(torch.tensor(negative_tokens.attention_mask))
-
-                data['negative_ids'] = torch.stack(negative_ids)
-                data['negative_attention_mask'] = torch.stack(negative_attention_masks)
-                
-                triplets.append(data)
+                    data['negative_ids'] = torch.stack(negative_ids)
+                    data['negative_attention_mask'] = torch.stack(negative_attention_masks)
+                    
+                    triplets.append(data)
 
             torch.save(triplets, processed_path)
             new_cum_length = len(triplets) + self.cum_lengths[-1] if self.cum_lengths else len(triplets)
