@@ -77,7 +77,6 @@ def main():
 
             ax.legend(loc='upper left')
 
-    plt.xticks(rotation='45')
     plt.show()
 
 
