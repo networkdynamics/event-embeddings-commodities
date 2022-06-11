@@ -15,11 +15,16 @@ def main(args):
     batch_size = 1
     seq_len = 50
 
-    dataset = prediction.CommodityDataset(args.commodity, args.method, args.days_ahead, seq_len)
+    method_suffixes = {
+        'news2vec': '0521_news2vec_embeds',
+        'sentiment': 'sentiment'
+    }
+
+    dataset = prediction.CommodityDataset(args.commodity, method_suffixes[args.method], args.days_ahead, seq_len)
     df = dataset.df
 
-    train_size = int(0.8 * len(dataset))
-    val_size = int(0.1 * len(dataset))
+    train_size = int(0.7 * len(dataset))
+    val_size = int(0.15 * len(dataset))
     test_size = len(dataset) - train_size - val_size
     indices = list(range(len(dataset)))
     
@@ -31,11 +36,9 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
     model.eval()
-    model.load_state_dict(torch.load(model_checkpoint_path))
+    model.load_state_dict(torch.load(model_checkpoint_path, map_location=device))
 
-    close_mean = df['close'].mean()
-    close_std = df['close'].std()
-    df['predicted'] = 0
+    df['predicted'] = None
 
     with torch.no_grad():
         for batch in test_dataloader:
@@ -54,10 +57,15 @@ def main(args):
                 decoder_output, decoder_hidden, decoder_attention = model(
                     decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
 
-            last_index = indices[-1]
-            final_pred = decoder_output.detach().numpy()
-            # normalize
-            df.at[last_index + args.days_ahead, 'predicted'] = (final_pred * close_std) + close_mean
+            last_index = int(indices[0][-1].detach().numpy())
+            final_pred = decoder_output.detach().numpy()[0]
+            df.at[last_index, 'predicted'] = final_pred
+
+    
+    if 'diff' in args.model_checkpoint_name:
+        df['predicted'] = df['predicted'] + df['norm_close'].shift(1)
+    df['predicted'] = df['predicted'].shift(args.days_ahead)
+    df['predicted'] = (df['predicted'] * df['close'].std()) + df['close'].mean()
 
     df.to_csv(model_checkpoint_path.replace('.pt', '_predictions.csv'))
 
@@ -66,10 +74,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--commodity')
-    parser.add_argument('--days-ahead')
+    parser.add_argument('--days-ahead', type=int)
     parser.add_argument('--method')
     parser.add_argument('--combine')
-    parser.add_argument('--hidden-size')
+    parser.add_argument('--hidden-size', type=int)
     parser.add_argument('--model-checkpoint-name')
     args = parser.parse_args()
 
