@@ -2,23 +2,27 @@ import argparse
 import os
 
 from matplotlib import pyplot as plt
-import torch
-
-import prediction
+from matplotlib import dates as mdates
+import pandas as pd
 
 def main(args):
 
-    this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    checkpoint_path = os.path.join(this_dir_path, '..', '..', 'checkpoints', 'commodity')
-    model_checkpoint_path = os.path.join(checkpoint_path, args.commodity, str(args.days_ahead), args.method, args.model_checkpoint_name)
+    df = pd.read_csv(args.file_path)
 
-    
+    df = df[df['predicted'].notnull()]
+    df['date'] = pd.to_datetime(df['date'])
 
     # plot
     fig, ax = plt.subplots()
+
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=20))
+
     ax.plot(df['date'], df['close'], label='Close')
+    ax.plot(df['date'], df['close'].shift(30), label='Continues')
     ax.plot(df['date'], df['predicted'], label='Predicted Close')
 
+    plt.xticks(rotation='45')
     plt.legend()
     plt.show()
 
@@ -26,10 +30,7 @@ def main(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--commodity')
-    parser.add_argument('--days-ahead')
-    parser.add_argument('--method')
-    parser.add_argument('--model-checkpoint-name')
+    parser.add_argument('--file-path')
     args = parser.parse_args()
 
     main(args)

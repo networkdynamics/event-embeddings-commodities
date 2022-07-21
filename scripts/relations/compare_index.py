@@ -61,7 +61,8 @@ def main(args):
         (datetime.date(2015, 11, 1), 'Paris attacks'),
         (datetime.date(2017, 9, 1), 'US - North Korea Tensions'),
         (datetime.date(2018, 4, 1), 'Syria missile strikes'),
-        (datetime.date(2019, 5, 1), 'US - Iran Tensions')
+        (datetime.date(2019, 5, 1), 'US - Iran Tensions'),
+        (datetime.date(2020, 1, 1), 'Iranian General Killed')
     ]
     for event in events:
         ax.plot([event[0], event[0]], [lower_y_lim, 4], 'k-', lw=1, alpha=0.2)
