@@ -20,7 +20,14 @@ def main(args):
         'sentiment': 'sentiment'
     }
 
-    dataset = prediction.CommodityDataset(args.commodity, method_suffixes[args.method], args.days_ahead, seq_len)
+    if 'dir' in args.model_checkpoint_name:
+        target = 'dir'
+    elif 'diff' in args.model_checkpoint_name:
+        target = 'diff'
+    else:
+        target = 'price'
+
+    dataset = prediction.CommodityDataset(args.commodity, method_suffixes[args.method], args.days_ahead, seq_len, target=target)
     df = dataset.df
 
     train_size = int(0.7 * len(dataset))
@@ -39,6 +46,11 @@ def main(args):
     model.load_state_dict(torch.load(model_checkpoint_path, map_location=device))
 
     df['predicted'] = None
+    df['important_title'] = None
+    df['important_title_attention'] = None
+
+    mean_close = df['close'].mean()
+    std_close = df['close'].std()
 
     with torch.no_grad():
         for batch in test_dataloader:
@@ -58,14 +70,22 @@ def main(args):
                     decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
 
             last_index = int(indices[0][-1].detach().numpy())
+
+            attention = decoder_attention.squeeze(0).squeeze(1)
+            important_title_attention = float(attention.max())
+            important_title_idx = int(attention.argmax())
+            df.at[last_index, 'important_title_attention'] = important_title_attention
+            df.at[last_index, 'important_title'] = df.loc[last_index, 'title'][important_title_idx]
+
             final_pred = decoder_output.detach().numpy()[0]
+
             df.at[last_index, 'predicted'] = final_pred
 
-    
     if 'diff' in args.model_checkpoint_name:
         df['predicted'] = df['predicted'] + df['norm_close'].shift(1)
-    df['predicted'] = df['predicted'].shift(args.days_ahead)
+
     df['predicted'] = (df['predicted'] * df['close'].std()) + df['close'].mean()
+    df['predicted'] = df['predicted'].shift(args.days_ahead)
 
     df.to_csv(model_checkpoint_path.replace('.pt', '_predictions.csv'))
 
