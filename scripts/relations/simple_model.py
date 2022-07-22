@@ -10,7 +10,7 @@ def main():
     data_path = os.path.join(this_dir_path, '..', '..', 'data')
     relations_path = os.path.join(data_path, 'relations')
 
-    path_keyword = '0521_news2vec_embeds'#'lm_small_embed'
+    path_keyword = 'lm_small_embed'#'0521_news2vec_embeds'
     very_high_titles = [
         'Russia deploys more surface-to-air missiles in Crimean build-up', 
         "Rebels push west as air strikes hit Gaddafi forces",
@@ -102,21 +102,25 @@ def main():
     mid_low_embeds_df = df[df['title'].isin(mid_low_titles)]
     neutral_embeds_df = df[df['title'].isin(neutral_titles)]
 
-    #very_high_embeds = np.stack(very_high_embeds_df['embedding'].values)
+    very_high_embeds = np.stack(very_high_embeds_df['embedding'].values)
     high_embeds = np.stack(high_embeds_df['embedding'].values)
     mid_high_embeds = np.stack(mid_high_embeds_df['embedding'].values)
     low_embeds = np.stack(low_embeds_df['embedding'].values)
     mid_low_embeds = np.stack(mid_low_embeds_df['embedding'].values)
     neutral_embeds = np.stack(neutral_embeds_df['embedding'].values)
     
-    #X = np.concatenate([very_high_embeds, high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
-    X = np.concatenate([high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
-    #y = np.array([10] * len(very_high_embeds) + [5] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-0.5] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
-    y = np.array([5] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-0.5] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
-    reg = LinearRegression().fit(X,y)
+    X = np.concatenate([very_high_embeds, high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
+    #X = np.concatenate([high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
+    y = np.array([10] * len(very_high_embeds) + [5] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-0.5] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
+    #y = np.array([5] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-0.5] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
+    
+    model_keyword = 'regression'
 
-    article_embed_paths = [os.path.join(relations_path, filename) for filename in os.listdir(relations_path) if path_keyword in filename]
-    #article_embed_paths = [us_embed_path]
+    if model_keyword == 'regression':
+        reg = LinearRegression().fit(X,y)
+
+    #article_embed_paths = [os.path.join(relations_path, filename) for filename in os.listdir(relations_path) if path_keyword in filename]
+    article_embed_paths = [us_embed_path]
 
     for article_embed_path in article_embed_paths:
         print(f"Getting index for {os.path.basename(article_embed_path)}")
@@ -127,7 +131,7 @@ def main():
         df['embedding'] = df['embedding'].str.strip('[]').apply(lambda x: np.fromstring(x, sep=' '))
         df['index'] = df['embedding'].apply(lambda embed: reg.predict(embed.reshape(1,-1))[0][0])
         df = df[['publish_date', 'title', 'index']]
-        df.to_csv(article_embed_path.replace(path_keyword, f'{path_keyword}_threat_regression'), index=False)
+        df.to_csv(article_embed_path.replace(path_keyword, f'{path_keyword}_threat_{model_keyword}'), index=False)
 
 
 if __name__ == '__main__':
