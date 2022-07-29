@@ -232,7 +232,7 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
 
 def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, target):
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.000001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.00001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
     if target == 'price' or target == 'diff':
