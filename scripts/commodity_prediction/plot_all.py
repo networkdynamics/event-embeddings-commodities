@@ -37,56 +37,58 @@ def main():
 
     days_ahead = 30
 
-    for commodity in commodities:
-        for method in methods:
-            df = pd.read_csv(args.file_path)
+    #plot
+    num_rows = 2
+    num_cols = 7
+    fig, axes = plt.subplots(nrows=num_rows, ncols=num_cols, figsize=(16,10))
 
-            match = re.search("\/([0-9]{1,2})\/", args.file_path)
-            days_ahead = int(match.group(0).strip('/'))
+    for idx, commodity in enumerate(commodities):
+        row_idx = idx // num_cols
+        col_idx = idx % num_cols
+        ax = axes[row_idx, col_idx]
+        plotted_truth = False
+
+        commodity_dir_path = os.path.join(checkpoint_path, commodity)
+        for method in methods:
+            method_dir_path = os.path.join(commodity_dir_path, str(days_ahead), method)
+            prediction_file_names = os.listdir(method_dir_path)
+            best_accuracy = 999999
+            for file_name in prediction_file_names:
+                if not file_name.endswith('predictions.csv'):
+                    continue
+
+                if 'dir' in file_name or 'diff' in file_name:
+                    continue
+
+                acc_regex = '[0-9]{1}_[0-9]{4}'
+                acc_match = re.search(acc_regex, file_name)
+                if not acc_match:
+                    continue
+
+                acc_str = acc_match.group(0)
+                accuracy = float(acc_str.replace('_', '.'))
+                if accuracy < best_accuracy:
+                    best_accuracy = accuracy
+                    best_predictions_name = file_name
+
+            predictions_path = os.path.join(method_dir_path, best_predictions_name)
+            df = pd.read_csv(predictions_path)
 
             df = df[df['predicted'].notnull()]
             df['date'] = pd.to_datetime(df['date']).dt.date
 
-            df['num_titles'] = df['title'].apply(len)
-            #high_attn_df = df[(df['important_title_attention'] > 0.99) & (df['num_titles'] > 80)]
-
-            # plot
-            fig, ax = plt.subplots()
-
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=30))
 
-            ax.plot(df['date'], df['close'], label='Close')
-            ax.plot(df['date'], df['predicted'], label='Predicted Close')
+            if not plotted_truth:
+                ax.plot(df['date'], df['close'], label='Close')
+                plotted_truth = True
 
-            text_y = 35
+            ax.plot(df['date'], df['predicted'], label=f'{method} Predicted')
+            ax.set_title(commodity)
 
-            dates = [
-                datetime.date(2020, 1, 6),
-                datetime.date(2020, 4, 21),
-                datetime.date(2020, 11, 4),
-                datetime.date(2021, 3, 8)
-            ]
-
-            for date in dates:
-                date_df = df[df['date'] == date]
-                idx = date_df.index.values.astype(int)[0]
-                row = date_df.iloc[0]
-
-                ax.text(row['date'], text_y, row['important_title'], {'ha': 'right', 'va': 'top'}, rotation=45, fontsize=13)
-                ax.plot([row['date'], row['date']], [text_y, row['close']], 'k-', lw=1, alpha=0.2)
-                ax.plot(row['date'], row['close'], 'o', color='blue')
-
-                predicted_row = df.loc[idx + days_ahead]
-                future_date = predicted_row['date']
-                predicted_val = predicted_row['predicted']
-                ax.plot(future_date, predicted_val, 'o', color='orange')
-
-
-            ax.set_ylim([-50, 75])
-
-    plt.xticks(rotation='45')
     plt.legend()
+    fig.tight_layout()
     plt.show()
 
 
