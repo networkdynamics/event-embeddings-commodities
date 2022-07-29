@@ -1,5 +1,6 @@
 .vscode
 data
 checkpoints
+figs
 secrets.txt
 __pycache__

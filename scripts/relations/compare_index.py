@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
 
-def main(args):
+def main():
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     relations_path = os.path.join(this_dir_path, '..', '..', 'data', 'relations')
-    index_file_path = os.path.join(relations_path, f"{args.country}_threat_regression.csv")
-    df = pd.read_csv(args.file_path)
+    index_file_path = os.path.join(relations_path, "united_states_0521_news2vec_embeds_threat_regression.csv")
+    df = pd.read_csv(index_file_path)
 
     first_year = 2007
     last_year = 2021
@@ -30,10 +30,7 @@ def main(args):
     fed_index_path = os.path.join(relations_path, 'data_gpr_export.xls')
     fed_index_df = pd.read_excel(fed_index_path)
 
-    country_map = {
-        'united_states': 'USA'
-    }
-    fed_index_df = fed_index_df[['month', f'GPRC_{country_map[args.country]}']]
+    fed_index_df = fed_index_df[['month', 'GPRC_USA']]
     fed_index_df = fed_index_df[fed_index_df['month'].dt.year >= first_year]
     fed_index_df = fed_index_df[fed_index_df['month'].dt.year <= last_year]
 
@@ -61,7 +58,8 @@ def main(args):
         (datetime.date(2015, 11, 1), 'Paris attacks'),
         (datetime.date(2017, 9, 1), 'US - North Korea Tensions'),
         (datetime.date(2018, 4, 1), 'Syria missile strikes'),
-        (datetime.date(2019, 5, 1), 'US - Iran Tensions'),
+        (datetime.date(2018, 7, 1), 'US - Iran Tensions'),
+        (datetime.date(2019, 9, 1), 'Attack on Saudi Oil'),
         (datetime.date(2020, 1, 1), 'Iranian General Killed')
     ]
     for event in events:
@@ -75,10 +73,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--country')
-    parser.add_argument('--file-path')
-    args = parser.parse_args()
-
-    main(args)
+    main()

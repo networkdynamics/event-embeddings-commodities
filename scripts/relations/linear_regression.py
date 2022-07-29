@@ -32,7 +32,7 @@ def main():
         "As Tibetan self-immolations rise, Beijing tightens grip",
         "Military planners prepare for war in Mali",
         "U.S. judge orders former Trump aides to stay under home arrest",
-        "Analysis: After U.S. embassy attack, West uneasy over Saleh's role"
+        "Analysis: After U.S. embassy attack, West uneasy over Saleh's role",
     ]
     low_titles = [
         'Britain says in talks with Iran about reopening embassies', 
