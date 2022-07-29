@@ -11,10 +11,10 @@ def main(args):
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     checkpoint_path = os.path.join(this_dir_path, '..', '..', 'checkpoints', 'commodity')
 
-    batch_size = 32
+    batch_size = 16
     seq_len = 50
     resume = False
-    target = 'dir'
+    target = 'price'
 
     if args.method == 'sentiment':
         suffix = 'sentiment'
@@ -26,7 +26,7 @@ def main(args):
         combine = 'attn'
     elif args.method == 'lm_embed':
         suffix = 'lm_small_embed'
-        hidden_size = 64 # 48, 64
+        hidden_size = 64 # 32, 48, 64
         combine = 'attn'
 
     scores = {}

@@ -37,9 +37,10 @@ class LanguageModelEmbed(torch.nn.Module):
     def forward(self, input_ids, attention_mask):
 
         outputs = self.model(input_ids, attention_mask=attention_mask)
-        hidden_state = outputs.logits
+        logits = outputs.logits
         #hidden_state = hidden_state[:, 0, :]  # take <s> token (equiv. to [CLS])
-        return hidden_state
+        logits = torch.nn.functional.normalize(logits, dim=-1)
+        return logits
 
 
 def train(model, data, device, checkpoint_path, resume):
@@ -151,6 +152,9 @@ def embed(model, data_path, batch_size, device, checkpoint_path):
     elif os.path.isfile(data_path):
         article_paths = [data_path]
 
+    model.eval()
+    model.load_state_dict(torch.load(checkpoint_path))
+
     for article_path in article_paths:
 
         article_embed_path = article_path.replace('articles', 'lm_small_embed')
@@ -162,9 +166,6 @@ def embed(model, data_path, batch_size, device, checkpoint_path):
         articles_df = pd.read_csv(article_path)
         articles_df = articles_df[['text', 'title', 'publish_date', 'url']]
         dataloader = prep_articles_for_embed(articles_df, batch_size)
-
-        model.eval()
-        model.load_state_dict(torch.load(checkpoint_path))
 
         embed_df = None
         progress_bar_data = tqdm.tqdm(enumerate(dataloader), total=len(dataloader))

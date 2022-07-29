@@ -12,7 +12,7 @@ import tqdm
 
 TEACHER_FORCING_RATIO = 0.5
 MAX_EPOCHS = 10000
-EARLY_STOPPING_PATIENCE = 40
+EARLY_STOPPING_PATIENCE = 10
 SEQUENCE_LENGTH = 100
 
 
@@ -208,7 +208,7 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
             decoder_input = inputs[:, idx]  # Teacher forcing
             decoder_output, decoder_hidden, decoder_attention = decoder(
                 decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
-            loss += criterion(decoder_output.unsqueeze(-1), targets[:,idx].unsqueeze(-1))
+            loss += criterion(decoder_output, targets[:,idx])
 
     else:
         # Without teacher forcing: use its own predictions as the next input
@@ -226,19 +226,19 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
                 else:
                     decoder_input = outputs[:, idx - days_ahead]
 
-            loss += criterion(decoder_output.unsqueeze(-1), targets[:,idx].unsqueeze(-1))
+            loss += criterion(decoder_output, targets[:,idx])
 
     return loss
 
 def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, target):
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.00001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
     if target == 'price' or target == 'diff':
         criterion = torch.nn.MSELoss()
     else:
-        criterion = torch.nn.CrossEntropyLoss()
+        criterion = torch.nn.BCELoss()
 
     model.train()
 
@@ -304,12 +304,15 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
 
         print(f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
-def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, criterion, device):
+def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, criterion, device, target):
     
     batch_size = targets.shape[0]
     target_length = targets.shape[1]
 
-    loss = 0
+    if target == 'dir':
+        loss = torch.zeros((batch_size)).to(device)
+    else:
+        loss = 0
 
     decoder_hidden = decoder.init_hidden(batch_size, device)
 
@@ -317,20 +320,25 @@ def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, crite
         decoder_input = inputs[:, idx]  # Teacher forcing
         decoder_output, decoder_hidden, decoder_attention = decoder(
             decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
-        loss += criterion(decoder_output.unsqueeze(-1), targets[:,idx].unsqueeze(-1))
+        loss += criterion(decoder_output, targets[:,idx])
 
-    return loss.item() / target_length
+    if target == 'dir':
+        return float(torch.mean(loss / target_length))
+    else:
+        return loss.item() / target_length
 
 def test(model, test_data, device, checkpoint_path, target):
 
     if target == 'price' or target == 'diff':
         criterion = torch.nn.MSELoss()
     else:
-        criterion = torch.nn.CrossEntropyLoss()
+        def criterion(predicted, target):
+            predicted_dir = (predicted >= 0.5).float()
+            return 1 - torch.abs(predicted_dir - target)
 
     model.eval()
 
-    model.load_state_dict(torch.load(checkpoint_path))
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 
         # train on training set
     test_loss = 0
@@ -342,10 +350,11 @@ def test(model, test_data, device, checkpoint_path, target):
             inputs = batch['inputs'].to(device)
             targets = batch['targets'].to(device)
             
-            batch_loss = test_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device)
+            batch_loss = test_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device, target)
             test_loss += batch_loss
         
     test_loss /= len(test_data)
+    print(f"Test Loss: {test_loss}")
     return test_loss
 
 
@@ -353,8 +362,8 @@ def test(model, test_data, device, checkpoint_path, target):
 def load_data(commodity, suffix, batch_size, days_ahead, seq_len, target):
     dataset = CommodityDataset(commodity, suffix, days_ahead, seq_len, target)
 
-    train_size = int(0.7 * len(dataset))
-    val_size = int(0.15 * len(dataset))
+    train_size = int(0.8 * len(dataset))
+    val_size = int(0.1 * len(dataset))
     test_size = len(dataset) - train_size - val_size
     indices = list(range(len(dataset)))
     
@@ -392,7 +401,7 @@ if __name__ == '__main__':
     parser.add_argument('--combine', choices=['attn', 'avg'], default='attn')
     parser.add_argument('--commodity')
     parser.add_argument('--suffix')
-    parser.add_argument('--mode')
+    parser.add_argument('--mode', choices=['test', 'train'])
     parser.add_argument('--resume')
     parser.add_argument('--checkpoint-path')
     parser.add_argument('--target', default='dir')

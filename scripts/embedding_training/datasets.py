@@ -11,7 +11,7 @@ import transformers
 
 NUM_NEGATIVE = 2
 MAX_TOKENS = 512
-MIN_COMMON_ENTITIES = 3
+MIN_COMMON_ENTITIES = 5
 
 
 class ChunkDataset(torch.utils.data.Dataset):
