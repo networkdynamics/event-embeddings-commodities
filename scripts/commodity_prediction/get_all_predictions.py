@@ -83,13 +83,13 @@ def main():
 
             model_predictions_file_path = model_checkpoint_path.replace('.pt', '_predictions.csv')
             if os.path.exists(model_predictions_file_path):
-                continue
+                pass#continue
 
             dataset = prediction.CommodityDataset(commodity, methods[method]['suffix'], days_ahead, seq_len, target=target)
             df = dataset.df
 
-            train_size = int(0.7 * len(dataset))
-            val_size = int(0.15 * len(dataset))
+            train_size = int(0.8 * len(dataset))
+            val_size = int(0.1 * len(dataset))
             test_size = len(dataset) - train_size - val_size
             indices = list(range(len(dataset)))
             

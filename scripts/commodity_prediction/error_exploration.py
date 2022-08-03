@@ -1,8 +1,6 @@
 import os
 import re
 
-from matplotlib import pyplot as plt
-from matplotlib import dates as mdates
 import pandas as pd
 
 def main():
@@ -35,19 +33,11 @@ def main():
 
     days_ahead = 30
 
-    #plot
-    num_rows = 2
-    num_cols = 7
-    fig, axes = plt.subplots(nrows=num_rows, ncols=num_cols, figsize=(16,10))
-
     for idx, commodity in enumerate(commodities):
-        row_idx = idx // num_cols
-        col_idx = idx % num_cols
-        ax = axes[row_idx, col_idx]
-        plotted_truth = False
-
+        print(commodity)
         commodity_dir_path = os.path.join(checkpoint_path, commodity)
         for method in methods:
+            print(method)
             method_dir_path = os.path.join(commodity_dir_path, str(days_ahead), method)
             prediction_file_names = os.listdir(method_dir_path)
             best_accuracy = 999999
@@ -73,22 +63,13 @@ def main():
             df = pd.read_csv(predictions_path)
 
             df = df[df['predicted'].notnull()]
-            df['date'] = pd.to_datetime(df['date']).dt.date
+            
+            df['norm_close'] = (df['close'] - df['close'].mean()) / df['close'].std()
+            df['norm_pred'] = (df['predicted'] - df['predicted'].mean()) / df['predicted'].std()
 
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-            ax.xaxis.set_major_locator(mdates.DayLocator(interval=30))
-
-            if not plotted_truth:
-                ax.plot(df['date'], df['close'], label='Close')
-                plotted_truth = True
-
-            ax.plot(df['date'], df['predicted'], label=f'{method} Predicted')
-            ax.set_title(commodity)
-
-    plt.legend()
-    fig.tight_layout()
-    plt.show()
-
+            df['squared_error'] = (df['norm_pred'] - df['norm_close']) ** 2
+            print(f"Mean: {df['squared_error'].mean()}")
+            print(f"Variance: {df['squared_error'].var()}")
 
 if __name__ == '__main__':
     main()

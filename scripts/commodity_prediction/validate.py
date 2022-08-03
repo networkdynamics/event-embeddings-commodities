@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 
 import torch
 
@@ -43,12 +44,12 @@ def main(args):
         'silver',
         'corn',
         'cotton',
-        'soybean_meal',
-        'soybean_oil',
         'soybean',
         'sugar',
         'wheat'
     ]
+
+    target = 'price'
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -57,36 +58,51 @@ def main(args):
         model_checkpoint_dir = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method)
         best_test_score = 9999
 
-        train_data, val_data, test_data, feature_size = prediction.load_data(commodity, suffix, batch_size, days_ahead, seq_len)
+        train_data, val_data, test_data, feature_size = prediction.load_data(commodity, suffix, batch_size, days_ahead, seq_len, target)
 
-        for model_file_name in os.listdir(model_checkpoint_dir):
-            
-            if 'final_model' not in model_file_name:
+        best_accuracy = 999999
+        for file_name in os.listdir(model_checkpoint_dir):
+            if not file_name.endswith('model.pt'):
                 continue
 
-            specified_test_score = model_file_name[:6]
+            if 'dir' in file_name or 'diff' in file_name:
+                continue
 
-            model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, model_file_name)
-            
-            for hidden_size in hidden_sizes:
-                model = prediction.AttnDecoderRNN(feature_size, hidden_size, combine=combine)
-                model = model.to(device)
-                try:
-                    model.load_state_dict(torch.load(model_checkpoint_path))
-                    break
-                except RuntimeError:
-                    continue
-            else:
-                raise Exception('No hidden size worked')
-            
-            test_score = prediction.test(model, test_data, device, model_checkpoint_path)
-            score_slug = f'{test_score:.4f}'.replace('.', '_')
+            acc_regex = '[0-9]{1}_[0-9]{4}'
+            acc_match = re.search(acc_regex, file_name)
+            if not acc_match:
+                continue
 
-            if score_slug != specified_test_score:
-                os.rename(model_checkpoint_path, model_checkpoint_path.replace(specified_test_score, score_slug))
-            else:
-                if test_score < best_test_score:
-                    best_test_score = test_score
+            acc_str = acc_match.group(0)
+            accuracy = float(acc_str.replace('_', '.'))
+            if accuracy < best_accuracy:
+                best_accuracy = accuracy
+                best_model_name = file_name
+
+
+        specified_test_score = best_model_name[:6]
+
+        model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, best_model_name)
+        
+        for hidden_size in hidden_sizes:
+            model = prediction.AttnDecoderRNN(feature_size, hidden_size, combine=combine)
+            model = model.to(device)
+            try:
+                model.load_state_dict(torch.load(model_checkpoint_path))
+                break
+            except RuntimeError:
+                continue
+        else:
+            raise Exception('No hidden size worked')
+        
+        test_score = prediction.test(model, test_data, device, model_checkpoint_path, target)
+        score_slug = f'{test_score:.4f}'.replace('.', '_')
+
+        if score_slug != specified_test_score:
+            print(f"Model: {model_checkpoint_path} did not achieve test score with these settings, test score achieved: {test_score:.4f}")
+        else:
+            if test_score < best_test_score:
+                best_test_score = test_score
 
         print(f"Best test score: {best_test_score:.4f}")
 

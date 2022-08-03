@@ -359,11 +359,11 @@ def test(model, test_data, device, checkpoint_path, target):
 
 
 
-def load_data(commodity, suffix, batch_size, days_ahead, seq_len, target):
+def load_data(commodity, suffix, batch_size, days_ahead, seq_len, target, split=[0.8, 0.1, 0.1]):
     dataset = CommodityDataset(commodity, suffix, days_ahead, seq_len, target)
 
-    train_size = int(0.8 * len(dataset))
-    val_size = int(0.1 * len(dataset))
+    train_size = int(split[0] * len(dataset))
+    val_size = int(split[1] * len(dataset))
     test_size = len(dataset) - train_size - val_size
     indices = list(range(len(dataset)))
     
