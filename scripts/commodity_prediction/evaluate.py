@@ -15,6 +15,7 @@ def main(args):
     seq_len = 50
     resume = False
     target = 'price'
+    metric = 'last'
 
     if args.method == 'sentiment':
         suffix = 'sentiment'
@@ -53,8 +54,9 @@ def main(args):
 
         for commodity in commodities:
             print(f"Testing {commodity}")
-            model_type_name = '' if target == 'price' else target
-            model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, f'final_{model_type_name}_model.pt')
+            model_type_name = '' if target == 'price' else f"_{target}"
+            metric_name = '' if metric == 'all' else f"_{metric}"
+            model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, f'final{model_type_name}{metric_name}_model.pt')
             train_data, val_data, test_data, feature_size = prediction.load_data(commodity, suffix, batch_size, days_ahead, seq_len, target)
 
             if not os.path.exists(os.path.dirname(model_checkpoint_path)):

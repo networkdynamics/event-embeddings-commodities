@@ -3,6 +3,7 @@ import datetime
 import operator
 import os
 import random
+from secrets import choice
 import sqlite3
 
 import numpy as np
@@ -230,7 +231,8 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
 
     return loss
 
-def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, target):
+
+def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, target, metric):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.00001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
@@ -279,7 +281,7 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
                 inputs = batch['inputs'].to(device)
                 targets = batch['targets'].to(device)
 
-                loss = train_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device, days_ahead)
+                loss = test_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device, target, metric)
                 batch_loss = loss.item() / targets.shape[1]
                 val_loss += batch_loss
 
@@ -304,7 +306,7 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
 
         print(f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
-def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, criterion, device, target):
+def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, criterion, device, target, metric):
     
     batch_size = targets.shape[0]
     target_length = targets.shape[1]
@@ -320,14 +322,22 @@ def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, crite
         decoder_input = inputs[:, idx]  # Teacher forcing
         decoder_output, decoder_hidden, decoder_attention = decoder(
             decoder_input, decoder_hidden, encoder_outputs[:,idx,:,:], attention_masks[:,idx,:])
-        loss += criterion(decoder_output, targets[:,idx])
+
+        if metric == 'all':
+            loss += criterion(decoder_output, targets[:,idx])
+        elif metric == 'last':
+            if idx == target_length - 1:
+                loss += criterion(decoder_output, targets[:,idx])
 
     if target == 'dir':
         return float(torch.mean(loss / target_length))
     else:
-        return loss.item() / target_length
+        if metric == 'all':
+            return loss.item() / target_length
+        elif metric == 'last':
+            return loss.item()
 
-def test(model, test_data, device, checkpoint_path, target):
+def test(model, test_data, device, checkpoint_path, target, metric):
 
     if target == 'price' or target == 'diff':
         criterion = torch.nn.MSELoss()
@@ -350,7 +360,7 @@ def test(model, test_data, device, checkpoint_path, target):
             inputs = batch['inputs'].to(device)
             targets = batch['targets'].to(device)
             
-            batch_loss = test_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device, target)
+            batch_loss = test_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device, target, metric)
             test_loss += batch_loss
         
     test_loss /= len(test_data)
@@ -390,9 +400,9 @@ def main(args):
     model = model.to(device)
 
     if args.mode == 'train':
-        train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead, args.target)
+        train(model, train_data, val_data, device, args.checkpoint_path, args.resume, args.days_ahead, args.target, args.metric)
     elif args.mode == 'test':
-        test(model, test_data, device, args.checkpoint_path, args.target)
+        test(model, test_data, device, args.checkpoint_path, args.target, args.metric)
 
 if __name__ == '__main__':
 
@@ -408,6 +418,7 @@ if __name__ == '__main__':
     parser.add_argument('--days-ahead', type=int, default=1)
     parser.add_argument('--seq-len', type=int, default=50)
     parser.add_argument('--hidden-size', type=int, default=5)
+    parser.add_argument('--metric', choices=['all', 'last'], default='last')
     args = parser.parse_args()
 
     main(args)
