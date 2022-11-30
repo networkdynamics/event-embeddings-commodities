@@ -145,7 +145,7 @@ def prep_articles_for_embed(articles_df, batch_size):
     return dataloader
 
 
-def embed(model, data_path, batch_size, device, checkpoint_path):
+def embed(model, data_path, batch_size, device, checkpoint_path, data_name):
 
     if os.path.isdir(data_path):
         article_paths = [os.path.join(data_path, file_name) for file_name in os.listdir(data_path) if 'articles' in file_name]
@@ -157,7 +157,7 @@ def embed(model, data_path, batch_size, device, checkpoint_path):
 
     for article_path in article_paths:
 
-        article_embed_path = article_path.replace('articles', 'lm_small_embed')
+        article_embed_path = article_path.replace('articles', data_name)
         if os.path.exists(article_embed_path):
             continue
 
@@ -203,12 +203,11 @@ def main(args):
     model = model.to(device)
 
     if args.mode == 'train':
-        assert args.graph_dataset_path
-        assert args.context_dataset_path
+        assert args.graph_dataset_path or args.context_dataset_path
         dataloader = datasets.load_data(args.graph_dataset_path, args.context_dataset_path, args.batch_size)
         train(model, dataloader, device, args.checkpoint_path, args.resume)
     elif args.mode == 'embed':
-        embed(model, args.dataset_path, args.batch_size, device, args.checkpoint_path)
+        embed(model, args.dataset_path, args.batch_size, device, args.checkpoint_path, args.data_name)
 
 if __name__ == '__main__':
 
@@ -217,6 +216,7 @@ if __name__ == '__main__':
     parser.add_argument('--graph-dataset-path')
     parser.add_argument('--context-dataset-path')
     parser.add_argument('--dataset-path')
+    parser.add_argument('--data-name')
     parser.add_argument('--embed-size', type=int, default=128)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--resume', type=bool, default=False)

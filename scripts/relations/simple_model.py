@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -109,15 +109,30 @@ def main():
     mid_low_embeds = np.stack(mid_low_embeds_df['embedding'].values)
     neutral_embeds = np.stack(neutral_embeds_df['embedding'].values)
     
-    X = np.concatenate([very_high_embeds, high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
-    #X = np.concatenate([high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
-    y = np.array([10] * len(very_high_embeds) + [5] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-0.5] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
-    #y = np.array([5] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-0.5] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
     
-    model_keyword = 'regression'
+    
+    model_keyword = 'logistic'
 
     if model_keyword == 'regression':
+        X = np.concatenate([very_high_embeds, high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
+        #X = np.concatenate([high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
+        y = np.array([10] * len(very_high_embeds) + [5] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-0.5] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
+        #y = np.array([5] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-0.5] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
         reg = LinearRegression().fit(X,y)
+
+        def get_prediction(embed):
+            return reg.predict(embed.reshape(1,-1))[0][0]
+
+    elif model_keyword == 'logistic':
+        X = np.concatenate([very_high_embeds, high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
+        #X = np.concatenate([high_embeds, mid_high_embeds, low_embeds, mid_low_embeds, neutral_embeds])
+        y = np.array([1] * len(very_high_embeds) + [1] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-1] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
+        #y = np.array([5] * len(high_embeds) + [1] * len(mid_high_embeds) + [-1] * len(low_embeds) + [-0.5] * len(mid_low_embeds) + [0] * len(neutral_embeds)).reshape(-1,1)
+        reg = LogisticRegression().fit(X,y)
+
+        def get_prediction(embed):
+            return reg.predict(embed.reshape(1,-1))[0]
+
 
     #article_embed_paths = [os.path.join(relations_path, filename) for filename in os.listdir(relations_path) if path_keyword in filename]
     article_embed_paths = [us_embed_path]
@@ -129,7 +144,7 @@ def main():
         df = df[['publish_date', 'title', 'embedding']]
         df['publish_date'] = pd.to_datetime(df['publish_date'])
         df['embedding'] = df['embedding'].str.strip('[]').apply(lambda x: np.fromstring(x, sep=' '))
-        df['index'] = df['embedding'].apply(lambda embed: reg.predict(embed.reshape(1,-1))[0][0])
+        df['index'] = df['embedding'].apply(get_prediction)
         df = df[['publish_date', 'title', 'index']]
         df.to_csv(article_embed_path.replace(path_keyword, f'{path_keyword}_threat_{model_keyword}'), index=False)
 

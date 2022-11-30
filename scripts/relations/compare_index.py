@@ -5,12 +5,16 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
+import pyreadr
 
 def main():
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     relations_path = os.path.join(this_dir_path, '..', '..', 'data', 'relations')
-    index_file_path = os.path.join(relations_path, "united_states_0521_news2vec_embeds_threat_regression.csv")
+    country = 'united_states'
+    embed = 'lm_small_embed'
+    method = 'logistic'
+    index_file_path = os.path.join(relations_path, f"{country}_{embed}_threat_{method}.csv")
     df = pd.read_csv(index_file_path)
 
     first_year = 2007
@@ -26,24 +30,36 @@ def main():
     df = df[df['publish_date'].dt.year >= first_year]
     df = df[df['publish_date'].dt.year <= last_year]
     df = df[df['count'] > 10]
+    df['mean'] = (df['mean'] - df['mean'].mean()) / df['mean'].std()
 
-    fed_index_path = os.path.join(relations_path, 'data_gpr_export.xls')
+    # load fed index
+    fed_index_path = os.path.join(relations_path, 'fedreserve', 'data_gpr_export.xls')
     fed_index_df = pd.read_excel(fed_index_path)
 
     fed_index_df = fed_index_df[['month', 'GPRC_USA']]
     fed_index_df = fed_index_df[fed_index_df['month'].dt.year >= first_year]
     fed_index_df = fed_index_df[fed_index_df['month'].dt.year <= last_year]
-
-    df['mean'] = (df['mean'] - df['mean'].mean()) / df['mean'].std()
     fed_index_df['GPRC_USA'] = (fed_index_df['GPRC_USA'] - fed_index_df['GPRC_USA'].mean()) / fed_index_df['GPRC_USA'].std()
 
-    fig, ax = plt.subplots()
+    # load trubowitz index
+    trubowitz_index_path = os.path.join(relations_path, 'trubowitzpaper', 'data_gpr.RDS')
+    trubowitz_index_df = pyreadr.read_r(trubowitz_index_path)[None]
+    trubowitz_index_df = trubowitz_index_df[['Date', 'GPR', 'GPR_ACT']]
+    trubowitz_index_df['Date'] = pd.to_datetime(trubowitz_index_df['Date'], format='%Y-%d-%m')
+    trubowitz_index_df = trubowitz_index_df[trubowitz_index_df['Date'].dt.year >= first_year]
+    trubowitz_index_df = trubowitz_index_df[trubowitz_index_df['Date'].dt.year <= last_year]
+    trubowitz_index_df['GPR'] = (trubowitz_index_df['GPR'] - trubowitz_index_df['GPR'].mean()) / trubowitz_index_df['GPR'].std()
+    trubowitz_index_df['GPR_ACT'] = (trubowitz_index_df['GPR_ACT'] - trubowitz_index_df['GPR_ACT'].mean()) / trubowitz_index_df['GPR_ACT'].std()
+    
+    fig, ax = plt.subplots(figsize=(12,9))
 
     #ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
     #ax.xaxis.set_major_locator(mdates.DayLocator(interval=400))
 
     ax.plot(df['publish_date'], df['mean'], label='Embed Index', color='r')
     ax.plot(fed_index_df['month'], fed_index_df['GPRC_USA'], label='Fed Index')
+    ax.plot(trubowitz_index_df['Date'], trubowitz_index_df['GPR'], label='Trubowitz GPR')
+    ax.plot(trubowitz_index_df['Date'], trubowitz_index_df['GPR_ACT'], label='Trubowitz GPR ACT')
 
     ax.legend(loc='upper left')
 
@@ -69,7 +85,9 @@ def main():
     ax.set_ylim([lower_y_lim, 8.5])
 
     plt.xticks(rotation='45')
-    plt.show()
+
+    fig_path = os.path.join(relations_path, '..', '..', 'figs', f'{country}_threat_compare_{embed}_{method}.png')
+    plt.savefig(fig_path)
 
 
 if __name__ == '__main__':

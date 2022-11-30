@@ -17,17 +17,24 @@ def main(args):
     target = 'price'
     metric = 'last'
 
+    target_name = '' if target == 'price' else f"_{target}"
+    metric_name = '' if metric == 'all' else f"_{metric}"
+
     if args.method == 'sentiment':
         suffix = 'sentiment'
-        hidden_size = 3 # 3, 4, 8
+        hidden_size = 64 # 3, 4, 8, 16, 32
         combine = 'avg'
     elif args.method == 'news2vec':
         suffix = '0521_news2vec_embeds'
-        hidden_size = 32 # 32, 48, 64
+        hidden_size = 64 #32, 48, 56, 64
         combine = 'attn'
     elif args.method == 'lm_embed':
         suffix = 'lm_small_embed'
-        hidden_size = 64 # 32, 48, 64
+        hidden_size = 48 #32, 48, 56, 64
+        combine = 'attn'
+    elif args.method =='lm_32_embed':
+        suffix = 'lm_32_embed'
+        hidden_size = 48 # 32, 48, 64, 128
         combine = 'attn'
 
     scores = {}
@@ -54,9 +61,7 @@ def main(args):
 
         for commodity in commodities:
             print(f"Testing {commodity}")
-            model_type_name = '' if target == 'price' else f"_{target}"
-            metric_name = '' if metric == 'all' else f"_{metric}"
-            model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, f'final{model_type_name}{metric_name}_model.pt')
+            model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, f'final{target_name}{metric_name}_model.pt')
             train_data, val_data, test_data, feature_size = prediction.load_data(commodity, suffix, batch_size, days_ahead, seq_len, target)
 
             if not os.path.exists(os.path.dirname(model_checkpoint_path)):
@@ -67,8 +72,8 @@ def main(args):
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             model = model.to(device)
 
-            prediction.train(model, train_data, val_data, device, model_checkpoint_path, resume, days_ahead, target)
-            test_score = prediction.test(model, test_data, device, model_checkpoint_path, target)
+            prediction.train(model, train_data, val_data, device, model_checkpoint_path, resume, days_ahead, target, metric)
+            test_score = prediction.test(model, test_data, device, model_checkpoint_path, target, metric)
             score_slug = f'{test_score:.4f}'.replace('.', '_')
             os.rename(model_checkpoint_path, model_checkpoint_path.replace('final', f'{score_slug}_final'))
             scores[commodity] = test_score
@@ -86,7 +91,7 @@ def main(args):
 
         for days_ahead in day_intervals:
             print(f"Testing {commodity}")
-            model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, 'final_model.pt')
+            model_checkpoint_path = os.path.join(checkpoint_path, commodity, str(days_ahead), args.method, f'final{target_name}{metric_name}_model.pt')
             train_data, val_data, test_data, feature_size = prediction.load_data(commodity, suffix, batch_size, days_ahead, seq_len)
 
             if not os.path.exists(os.path.dirname(model_checkpoint_path)):
@@ -97,10 +102,10 @@ def main(args):
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             model = model.to(device)
 
-            prediction.train(model, train_data, val_data, device, model_checkpoint_path, resume, days_ahead)
-            test_score = prediction.test(model, test_data, device, model_checkpoint_path)
+            prediction.train(model, train_data, val_data, device, model_checkpoint_path, resume, days_ahead, target, metric)
+            test_score = prediction.test(model, test_data, device, model_checkpoint_path, target, metric)
             score_slug = f'{test_score:.4f}'.replace('.', '_')
-            os.rename(model_checkpoint_path, model_checkpoint_path.replace('final_model', f'{score_slug}_final_model'))
+            os.rename(model_checkpoint_path, model_checkpoint_path.replace('final', f'{score_slug}_final'))
             scores[days_ahead] = test_score
 
     print(scores)

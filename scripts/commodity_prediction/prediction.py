@@ -234,7 +234,7 @@ def train_model(encoder_outputs, attention_masks, inputs, targets, decoder, crit
 
 def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahead, target, metric):
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.00001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
     if target == 'price' or target == 'diff':
@@ -281,8 +281,7 @@ def train(model, train_data, val_data, device, checkpoint_path, resume, days_ahe
                 inputs = batch['inputs'].to(device)
                 targets = batch['targets'].to(device)
 
-                loss = test_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device, target, metric)
-                batch_loss = loss.item() / targets.shape[1]
+                batch_loss = test_model(encoder_outputs, attention_masks, inputs, targets, model, criterion, device, target, metric)
                 val_loss += batch_loss
 
         val_loss /= len(val_data)
@@ -369,7 +368,7 @@ def test(model, test_data, device, checkpoint_path, target, metric):
 
 
 
-def load_data(commodity, suffix, batch_size, days_ahead, seq_len, target, split=[0.8, 0.1, 0.1]):
+def load_data(commodity, suffix, batch_size, days_ahead, seq_len, target, split=[0.7, 0.15, 0.15]):
     dataset = CommodityDataset(commodity, suffix, days_ahead, seq_len, target)
 
     train_size = int(split[0] * len(dataset))

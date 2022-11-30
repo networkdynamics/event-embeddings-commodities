@@ -360,9 +360,16 @@ class ArticleContextDataset(ChunkDataset):
 
 
 def load_data(graph_dataset_path, context_dataset_path, batch_size):
-    graph_dataset = ArticleGraphDataset(graph_dataset_path)
-    context_dataset = ArticleContextDataset(context_dataset_path)
-    dataset = torch.utils.data.ConcatDataset([graph_dataset, context_dataset])
+    datasets = []
+    if graph_dataset_path:
+        graph_dataset = ArticleGraphDataset(graph_dataset_path)
+        datasets.append(graph_dataset)
+
+    if context_dataset_path:
+        context_dataset = ArticleContextDataset(context_dataset_path)
+        datasets.append(context_dataset)
+
+    dataset = torch.utils.data.ConcatDataset(datasets)
 
     indices = list(range(len(dataset)))
     subset = torch.utils.data.Subset(dataset, indices[:])
