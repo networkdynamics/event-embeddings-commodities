@@ -1,9 +1,7 @@
 import argparse
 import datetime
-import operator
 import os
 import random
-from secrets import choice
 import sqlite3
 
 import numpy as np
@@ -30,7 +28,6 @@ class CommodityDataset(torch.utils.data.Dataset):
         commodity_dir = os.path.join(this_dir_path, '..', '..', 'data', 'commodity_data')
 
         commodity_price_path = os.path.join(commodity_dir, f"{commodity}.csv")
-        commodity_article_path = os.path.join(commodity_dir, f"{commodity}_{suffix}.csv")
         price_df = pd.read_csv(commodity_price_path)
         price_df = price_df.rename(columns={'Date': 'date', 'Close': 'close', 'Open': 'open'})
         price_df = price_df[['date', 'open', 'close']]
@@ -41,47 +38,53 @@ class CommodityDataset(torch.utils.data.Dataset):
         price_df['date'] = pd.to_datetime(price_df['date'])
         price_df['last_date'] = pd.to_datetime(price_df['last_date'])
 
+        if suffix != 'constant':
+            commodity_article_path = os.path.join(commodity_dir, f"{commodity}_{suffix}.csv")
+            article_df = pd.read_csv(commodity_article_path)#, dtype={'publish_date': str, 'title': str, 'embedding': str, 'embed': str, 'sentiment': float})
 
-        article_df = pd.read_csv(commodity_article_path)#, dtype={'publish_date': str, 'title': str, 'embedding': str, 'embed': str, 'sentiment': float})
+            article_df = article_df.dropna()
 
-        article_df = article_df.dropna()
+            article_df = article_df.rename(columns={'embed': 'embedding'})
+            self.feature = [feat_type for feat_type in ['sentiment', 'embedding'] if feat_type in article_df.columns][0]
 
-        article_df = article_df.rename(columns={'embed': 'embedding'})
-        self.feature = [feat_type for feat_type in ['sentiment', 'embedding'] if feat_type in article_df.columns][0]
+            article_df = article_df[['title', 'publish_date', self.feature]]
+            article_df['publish_date'] = pd.to_datetime(article_df['publish_date'])
+        
+            # group articles by next trading day
+            #Make the db in memory
+            conn = sqlite3.connect(':memory:')
+            #write the tables
+            article_df.to_sql('articles', conn, index=False)
+            price_df.to_sql('price', conn, index=False)
 
-        article_df = article_df[['title', 'publish_date', self.feature]]
-        article_df['publish_date'] = pd.to_datetime(article_df['publish_date'])
-    
-        # group articles by next trading day
-        #Make the db in memory
-        conn = sqlite3.connect(':memory:')
-        #write the tables
-        article_df.to_sql('articles', conn, index=False)
-        price_df.to_sql('price', conn, index=False)
+            qry = f'''
+                select  
+                    date,
+                    open,
+                    close,
+                    title,
+                    {self.feature}
+                from
+                    articles join price on
+                    publish_date > last_date and publish_date <= date
+                '''
+            df = pd.read_sql_query(qry, conn)
 
-        qry = f'''
-            select  
-                date,
-                open,
-                close,
-                title,
-                {self.feature}
-            from
-                articles join price on
-                publish_date > last_date and publish_date <= date
-            '''
-        df = pd.read_sql_query(qry, conn)
+            if self.feature == 'embedding':
+                df['embedding'] = df['embedding'].str.strip('[]').replace('\n', '').apply(lambda x: np.fromstring(x, sep=' '))
+                self.feature_size = len(df['embedding'].iloc[0])
 
-        if self.feature == 'embedding':
-            df['embedding'] = df['embedding'].str.strip('[]').replace('\n', '').apply(lambda x: np.fromstring(x, sep=' '))
-            self.feature_size = len(df['embedding'].iloc[0])
-
-        elif self.feature == 'sentiment':
-            df['sentiment'] = df['sentiment'].apply(lambda x: np.array([x]))
+            elif self.feature == 'sentiment':
+                df['sentiment'] = df['sentiment'].apply(lambda x: np.array([x]))
+                self.feature_size = 1
+        else:
+            self.feature = None
             self.feature_size = 1
+            df = price_df
 
         df = df.groupby(['date', 'open', 'close']).agg(list).reset_index()
 
+        # TODO data leakage, only normalize in each split
         # normalize price
         df['norm_close'] = (df['close'] - df['close'].mean()) / df['close'].std()
         
@@ -97,25 +100,26 @@ class CommodityDataset(torch.utils.data.Dataset):
         df['previous_close_dir'] = df['previous_close_diff'].apply(lambda x: 1 if x >= 0 else 0)
         self.start_nulls = 1 if self.target == 'price' else 2
         
-        # perform padding
-        max_articles = df[df[self.feature] != 0][self.feature].apply(len).max()
+        if suffix != 'constant':
+            # perform padding
+            max_articles = df[df[self.feature] != 0][self.feature].apply(len).max()
 
-        def pad_features(features):
-            padded = np.zeros((max_articles, self.feature_size), dtype=float)
-            if features != 0:
-                for idx in range(len(features)):
-                    padded[idx,:] = features[idx][:]
-            return padded
+            def pad_features(features):
+                padded = np.zeros((max_articles, self.feature_size), dtype=float)
+                if features != 0:
+                    for idx in range(len(features)):
+                        padded[idx,:] = features[idx][:]
+                return padded
 
 
-        def create_attention_mask(features):
-            attention_mask = np.zeros((max_articles,), dtype=int)
-            if features != 0:
-                attention_mask[:len(features)] = 1
-            return attention_mask
+            def create_attention_mask(features):
+                attention_mask = np.zeros((max_articles,), dtype=int)
+                if features != 0:
+                    attention_mask[:len(features)] = 1
+                return attention_mask
 
-        df[f'padded_{self.feature}'] = df[self.feature].apply(pad_features)
-        df['attention_mask'] = df[self.feature].apply(create_attention_mask)
+            df[f'padded_{self.feature}'] = df[self.feature].apply(pad_features)
+            df['attention_mask'] = df[self.feature].apply(create_attention_mask)
 
         self.df = df
 
@@ -138,11 +142,75 @@ class CommodityDataset(torch.utils.data.Dataset):
         data_seq = {
             'index': torch.tensor(sequence.index.values),
             'inputs': inputs, 
-            'targets': targets, 
-            'encoder_outputs': torch.tensor(np.stack(sequence[f'padded_{self.feature}'].values)).float(),
-            'attention_mask': torch.tensor(np.stack(sequence['attention_mask'].values), dtype=int)
+            'targets': targets
         }
+
+        if self.feature:
+            encoder_outputs = torch.tensor(np.stack(sequence[f'padded_{self.feature}'].values)).float()
+            attention_mask = torch.tensor(np.stack(sequence['attention_mask'].values), dtype=int)
+        else:
+            encoder_outputs = torch.ones(*inputs.shape[:2], 1, 1)
+            attention_mask = torch.ones(*inputs.shape[:2], 1)
+        
+        data_seq['encoder_outputs'] = encoder_outputs
+        data_seq['attention_mask'] = attention_mask
+
         return data_seq
+
+class ConstantModel:
+    def __init__(self, target):
+        self.target = target
+
+    def __call__(self, input, hidden, encoder_outputs, attention_mask):
+        if self.target == 'price':
+            return input, None, None
+        elif self.target == 'diff':
+            return torch.zeros(input.shape, device=input.device), None, None
+
+class AttnDecoderRNN(torch.nn.Module):
+    def __init__(self, feature_size, hidden_size, combine='attn', dropout_p=0.5):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.combine = combine
+        self.dropout_p = dropout_p
+
+        self.attn = torch.nn.Linear(feature_size + hidden_size + 1, 1)
+        self.attn_combine = torch.nn.Linear(feature_size + 1, hidden_size)
+        self.dropout = torch.nn.Dropout(self.dropout_p)
+        self.gru = torch.nn.GRU(self.hidden_size, self.hidden_size, batch_first=True)
+        self.out = torch.nn.Linear(self.hidden_size, 1)
+
+    def forward(self, input, hidden, encoder_outputs, attention_mask):
+
+        if self.combine == 'attn':
+            num_attn_points = encoder_outputs.shape[1]
+            attn_params = torch.cat((encoder_outputs, torch.permute(hidden, (1,0,2)).expand(-1, num_attn_points, -1), input.view(-1, 1, 1).expand(-1, num_attn_points, -1)), 2)
+            attn_weights = self.attn(attn_params)
+            attn_weights = attn_weights.masked_fill(attention_mask.unsqueeze(2) == 0, -1e10)
+            attn_weights = torch.nn.functional.softmax(attn_weights, dim=1)
+            attn_applied = torch.bmm(attn_weights.transpose(1,2), encoder_outputs).squeeze(1)
+        elif self.combine == 'avg':
+            denom = torch.sum(attention_mask, -1, keepdim=True)
+            denom[denom == 0] = 1
+            attn_applied = torch.sum(encoder_outputs * attention_mask.unsqueeze(-1), dim=1) / denom
+            attn_weights = None
+
+        output = torch.cat((input.unsqueeze(1), attn_applied), 1)
+        output = self.attn_combine(output)
+
+        output = torch.nn.functional.relu(output)
+        output = self.dropout(output)
+
+        output, hidden = self.gru(output.unsqueeze(1), hidden)
+
+        output = torch.nn.functional.relu(output)
+        output = self.dropout(output)
+
+        output = self.out(output).squeeze(2).squeeze(1)
+        return output, hidden, attn_weights
+
+    def init_hidden(self, batch_size, device):
+        return torch.zeros(1, batch_size, self.hidden_size, device=device)
 
 
 class AttnDecoderRNN(torch.nn.Module):
@@ -315,7 +383,10 @@ def test_model(encoder_outputs, attention_masks, inputs, targets, decoder, crite
     else:
         loss = 0
 
-    decoder_hidden = decoder.init_hidden(batch_size, device)
+    if isinstance(decoder, torch.nn.Module):
+        decoder_hidden = decoder.init_hidden(batch_size, device)
+    else:
+        decoder_hidden = None
 
     for idx in range(target_length):
         decoder_input = inputs[:, idx]  # Teacher forcing
@@ -345,9 +416,9 @@ def test(model, test_data, device, checkpoint_path, target, metric):
             predicted_dir = (predicted >= 0.5).float()
             return 1 - torch.abs(predicted_dir - target)
 
-    model.eval()
-
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    if isinstance(model, torch.nn.Module):
+        model.eval()
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 
         # train on training set
     test_loss = 0

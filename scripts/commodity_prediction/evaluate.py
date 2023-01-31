@@ -36,6 +36,14 @@ def main(args):
         suffix = 'lm_32_embed'
         hidden_size = 48 # 32, 48, 64, 128
         combine = 'attn'
+    elif args.method =='lm_context_embed':
+        suffix = 'lm_context_embed'
+        hidden_size = 64 # 32, 48, 64, 128
+        combine = 'attn'
+    elif args.method =='lm_graph_embed':
+        suffix = 'lm_graph_embed'
+        hidden_size = 64 # 32, 48, 64, 128
+        combine = 'attn'
 
     scores = {}
 
