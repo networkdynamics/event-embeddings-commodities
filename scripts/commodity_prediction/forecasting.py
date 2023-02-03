@@ -6,16 +6,12 @@ import sqlite3
 
 # imports for training
 import lightning as pl
-from lightning.loggers import TensorBoardLogger
-from lightning.callbacks import EarlyStopping, LearningRateMonitor
+import pytorch_lightning.callbacks as plcb
 import pandas as pd
 import pytorch_forecasting as pyforecast
 
 
-def get_datasets(commodity, suffix, days_ahead, seq_len, target, split=[0.7, 0.15, 0.15]):
-    
-    assert target in ['price', 'diff', 'dir']
-
+def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]):
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     commodity_dir = os.path.join(this_dir_path, '..', '..', 'data', 'commodity_data')
 
@@ -120,6 +116,7 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, target, split=[0.7, 0.1
     # * the timeseries ID (which should be a unique string to identify each timeseries)
     # * the time of the observation (which should be a monotonically increasing integer)
     
+    df = df.reset_index()
     time_idx = 'index'
     future_col = 'close'
     group_col = 'group'
@@ -170,13 +167,15 @@ def get_mlp_model(training):
 def get_constant_model(training):
     return pyforecast.Baseline.from_dataset(training)
 
-def get_trainer(model, train_dataloader, val_dataloader):
+def get_trainer(model, train_dataloader, val_dataloader, checkpoint_path, checkpoint_filename):
     # create PyTorch Lighning Trainer with early stopping
-    early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=1, verbose=False, mode="min")
+    early_stop_callback = plcb.EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=10, verbose=False, mode="min")
+    checkpoint_callback = plcb.ModelCheckpoint(dirpath=checkpoint_path, filename=checkpoint_filename, monitor='valloss')
     trainer = pl.Trainer(
-        gpus=1,  # run on CPU, if on multiple GPUs, use accelerator="ddp"
+        accelerator='gpu',
+        devices=1,
         gradient_clip_val=0.1,
-        callbacks=[early_stop_callback]
+        callbacks=[early_stop_callback, checkpoint_callback]
     )
 
     # find the optimal learning rate

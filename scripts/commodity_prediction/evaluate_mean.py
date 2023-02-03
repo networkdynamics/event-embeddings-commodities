@@ -69,19 +69,17 @@ def get_score(commodity, days_ahead, num_runs, checkpoint_path, suffix, batch_si
     score = do_runs(commodity, days_ahead, model_checkpoints_dir, num_runs, suffix, batch_size, seq_len, target, metric, combine, device, best_hidden_size, accuracies)
     return score
 
-def do_runs(commodity, days_ahead, model_checkpoints_dir, num_runs, suffix, batch_size, seq_len, target, metric, combine, device, best_hidden_size, accuracies):
+def do_runs(commodity, days_ahead, model_checkpoints_dir, num_runs, suffix, batch_size, seq_len, combine, best_hidden_size, accuracies):
     this_num_runs = num_runs
     this_num_runs -= len(accuracies)
 
     if this_num_runs > 0:
-        train_data, val_data, test_data = forecasting.get_datasets(commodity, suffix, days_ahead, seq_len, target)
+        train_data, val_data, test_data = forecasting.get_datasets(commodity, suffix, days_ahead, seq_len)
         train_dataloader, val_dataloader, test_dataloader = forecasting.get_dataloaders(train_data, val_data, test_data, batch_size)
 
-    target_name = '' if target == 'price' else f"_{target}"
-    metric_name = '' if metric == 'all' else f"_{metric}"
-
     for _ in range(this_num_runs):
-        model_checkpoint_path = os.path.join(model_checkpoints_dir, f'final{target_name}{metric_name}_model.pt')
+        model_checkpoint_filename = 'mlp'
+        model_checkpoint_path = os.path.join(model_checkpoints_dir, model_checkpoint_filename)
         
         if not os.path.exists(os.path.dirname(model_checkpoint_path)):
             os.makedirs(os.path.dirname(model_checkpoint_path))
@@ -91,11 +89,12 @@ def do_runs(commodity, days_ahead, model_checkpoints_dir, num_runs, suffix, batc
         else:
             model = forecasting.get_mlp_model(train_data)
 
-            resume = False
-            trainer = forecasting.get_trainer(model, train_dataloader, val_dataloader)
-            forecasting.train(model, train_data, val_data, device, model_checkpoint_path, resume, days_ahead, target, metric)
+        trainer = forecasting.get_trainer(model, train_dataloader, val_dataloader, model_checkpoints_dir, model_checkpoint_filename)
 
-        test_score = prediction.test(model, test_data, device, model_checkpoint_path, target, metric)
+        if suffix != 'constant':
+            forecasting.train(trainer, model, train_dataloader, val_dataloader)
+
+        test_score = forecasting.test(trainer, model, test_dataloader)
         test_score = round(test_score, 4)
         score_slug = f'{test_score:.4f}'.replace('.', '_')
         
@@ -116,9 +115,9 @@ def main(args):
     batch_size = 16
     seq_len = 50
     num_runs = 5
-    target = 'diff'
+    target = 'price'
     metric = 'last'
-    ignore_prev_accuracies = False
+    ignore_prev_accuracies = True
 
     default_hidden_size = None
     if args.method == 'sentiment':
@@ -183,15 +182,16 @@ def main(args):
             if not os.path.exists(model_checkpoints_dir):
                 os.makedirs(model_checkpoints_dir)
 
-            hidden_size_accuracies = get_accuracies(model_checkpoints_dir, target, metric)
-            best_hidden_size, accuracies = get_best_hidden_and_accuracies(hidden_size_accuracies)
-            if not best_hidden_size:
-                best_hidden_size = default_hidden_size
+            #hidden_size_accuracies = get_accuracies(model_checkpoints_dir, target, metric)
+            #best_hidden_size, accuracies = get_best_hidden_and_accuracies(hidden_size_accuracies)
+            #if not best_hidden_size:
+            #    best_hidden_size = default_hidden_size
 
             if ignore_prev_accuracies:
                 accuracies = []
 
-            score = do_runs(commodity, days_ahead, model_checkpoints_dir, num_runs, suffix, batch_size, seq_len, target, metric, combine, device, best_hidden_size, accuracies)
+            best_hidden_size = default_hidden_size
+            score = do_runs(commodity, days_ahead, model_checkpoints_dir, num_runs, suffix, batch_size, seq_len, combine, best_hidden_size, accuracies)
             scores[commodity] = score
 
     elif args.variable == 'days_ahead':
