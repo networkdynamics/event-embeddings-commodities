@@ -78,7 +78,7 @@ def do_runs(commodity, days_ahead, model_checkpoints_dir, num_runs, suffix, batc
         train_dataloader, val_dataloader, test_dataloader = forecasting.get_dataloaders(train_data, val_data, test_data, batch_size)
 
     for _ in range(this_num_runs):
-        model_checkpoint_filename = 'mlp'
+        model_checkpoint_filename = 'nhits'
         model_checkpoint_path = os.path.join(model_checkpoints_dir, model_checkpoint_filename)
         
         if not os.path.exists(os.path.dirname(model_checkpoint_path)):

@@ -12,7 +12,7 @@ import pandas as pd
 import pytorch_forecasting as pyforecast
 import torch
 
-class NewsEmbeddings(pyforecast.models.nn.MultiEmbedding):
+class PretrainedMultiEmbeddings(pyforecast.models.nn.MultiEmbedding):
     def __init__(self, *args, **kwargs):
         self.embedding_weights = kwargs.pop('embedding_weights')
         super().__init__(*args, **kwargs)
@@ -20,23 +20,45 @@ class NewsEmbeddings(pyforecast.models.nn.MultiEmbedding):
     def init_embeddings(self):
         self.embeddings = torch.nn.ModuleDict()
         for name in self.embedding_sizes.keys():
+            if name not in self.embedding_weights:
+                embedding_size = self.embedding_sizes[name][1]
+                if self.max_embedding_size is not None:
+                    embedding_size = min(embedding_size, self.max_embedding_size)
+                # convert to list to become mutable
+                self.embedding_sizes[name] = list(self.embedding_sizes[name])
+                self.embedding_sizes[name][1] = embedding_size
+                
             if name in self.embedding_paddings:
                 padding_idx = 0
             else:
                 padding_idx = None
 
             if name in self.categorical_groups:  # embedding bag if related embeddings
-                self.embeddings[name] = pyforecast.models.nn.embeddings.TimeDistributedEmbeddingBag.from_pretrained(
-                    torch.tensor(self.embedding_weights[name]),
-                    padding_idx=padding_idx
-                )
-                self.embeddings[name].weight.requires_grad = False
+                if name in self.embedding_weights:
+                    self.embeddings[name] = pyforecast.models.nn.embeddings.TimeDistributedEmbeddingBag.from_pretrained(
+                        torch.tensor(self.embedding_weights[name], dtype=torch.float),
+                        padding_idx=padding_idx
+                    )
+                    self.embeddings[name].weight.requires_grad = False
+                else:
+                    self.embeddings[name] = pyforecast.models.nn.embeddings.TimeDistributedEmbeddingBag(
+                        self.embedding_sizes[name][0], embedding_size, mode="sum", batch_first=True
+                    )
+
             else:
-                self.embeddings[name] = torch.nn.Embedding.from_pretrained(
-                    torch.tensor(self.embedding_weights[name]), 
-                    padding_idx=padding_idx,
-                )
-                self.embeddings[name].weight.requires_grad = False
+                if name in self.embedding_weights:
+                    self.embeddings[name] = torch.nn.Embedding.from_pretrained(
+                        torch.tensor(self.embedding_weights[name], dtype=torch.float), 
+                        padding_idx=padding_idx,
+                    )
+                    self.embeddings[name].weight.requires_grad = False
+                else:
+                    self.embeddings[name] = torch.nn.Embedding(
+                        self.embedding_sizes[name][0],
+                        embedding_size,
+                        padding_idx=padding_idx,
+                    )
+
 
 class NewsEncoder(pyforecast.NaNLabelEncoder):
     def fit(self, y: pd.Series, overwrite: bool = False):
@@ -138,6 +160,7 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
         df = price_df
 
     df = df.groupby(['date', 'open', 'close']).agg(list).reset_index()
+    df['date'] = pd.to_datetime(df['date'])
 
     if suffix != 'constant':
         # perform padding
@@ -159,8 +182,9 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
     time_idx = 'index'
     future_col = 'close'
     group_col = 'group'
+    month_col = 'month'
+    df[month_col] = df['date'].dt.month.astype(str)
     article_index_col = 'article_index'
-    embeddings_col = feature
     df[group_col] = 'future'
     categorical_encoders = {'article_index': NewsEncoder(add_nan=True).fit(df[article_index_cols].to_numpy().reshape(-1))}
     training = pyforecast.TimeSeriesDataSet(
@@ -171,6 +195,7 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
         max_encoder_length=seq_len,  # how much history to use
         max_prediction_length=days_ahead,  # how far to predict into future
         # covariates known and unknown in the future to inform prediction
+        time_varying_known_categoricals=[month_col], # from the tutorial
         time_varying_unknown_reals=[future_col],
         time_varying_unknown_categoricals=[article_index_col],
         variable_groups={article_index_col: article_index_cols},
@@ -184,9 +209,9 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
 
 def get_dataloaders(training, validation, testset, batch_size):
     # convert datasets to dataloaders for training
-    train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=2)
-    val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=2)
-    test_dataloader = testset.to_dataloader(train=False, batch_size=batch_size, num_workers=2)
+    train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=4)
+    val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=4)
+    test_dataloader = testset.to_dataloader(train=False, batch_size=batch_size, num_workers=4)
     return train_dataloader, val_dataloader, test_dataloader
 
 def get_model(training, article_embeddings):
@@ -201,14 +226,15 @@ def get_model(training, article_embeddings):
         # loss metric to optimize
         loss=pyforecast.QuantileLoss(), # allows estimated error bars on predictions
         # logging frequency
-        log_interval=2,
+        log_interval=0,
         # optimizer parameters
-        learning_rate=0.03,
+        learning_rate=0.001,
+        optimizer='adam',
         reduce_on_plateau_patience=4,
-        embedding_sizes={'article_index': article_embeddings.shape},
+        embedding_sizes={'article_index': article_embeddings.shape, 'month': 12},
         embedding_paddings=['article_index']
     )
-    model.embeddings = NewsEmbeddings(
+    model.embeddings = PretrainedMultiEmbeddings(
         embedding_sizes=model.hparams.embedding_sizes,
         categorical_groups=model.hparams.categorical_groups,
         embedding_paddings=model.hparams.embedding_paddings,
@@ -223,7 +249,7 @@ def get_constant_model(training):
 def get_trainer(model, train_dataloader, val_dataloader, checkpoint_path, checkpoint_filename):
     # create PyTorch Lighning Trainer with early stopping
     early_stop_callback = plcb.EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=10, verbose=False, mode="min")
-    checkpoint_callback = plcb.ModelCheckpoint(dirpath=checkpoint_path, filename=checkpoint_filename, monitor='valloss')
+    checkpoint_callback = plcb.ModelCheckpoint(dirpath=checkpoint_path, filename=checkpoint_filename, monitor='val_loss')
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=1,
@@ -232,9 +258,9 @@ def get_trainer(model, train_dataloader, val_dataloader, checkpoint_path, checkp
     )
 
     # find the optimal learning rate
-    res = trainer.tuner.lr_find(
-        model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader, early_stop_threshold=1000.0, max_lr=0.3,
-    )
+    # res = trainer.tuner.lr_find(
+    #     model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader, early_stop_threshold=1000.0, max_lr=0.3,
+    # )
     return trainer
 
 def train(trainer, model, train_dataloader, val_dataloader):
@@ -246,10 +272,11 @@ def train(trainer, model, train_dataloader, val_dataloader):
 def test(trainer, model, test_dataloader):
     best_model_path = trainer.checkpoint_callback.best_model_path
     best_model = model.load_from_checkpoint(best_model_path)
-    actuals = torch.cat([y[0] for x, y in iter(test_dataloader)]) # TODO confused by this
+    actuals = torch.cat([y[0] for x, y in iter(test_dataloader)])
     predictions = best_model.predict(test_dataloader)
     metric = pyforecast.MAE()
-    acc = metric.loss(predictions, actuals)
+    acc = metric(predictions, actuals)
+    return float(acc)
 
 def main(args):
     training, validation, testset, article_embeddings = get_datasets(args.commodity, args.suffix, args.days_ahead, args.seq_len, args.target)
