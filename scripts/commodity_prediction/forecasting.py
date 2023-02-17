@@ -5,11 +5,71 @@ import os
 import sqlite3
 
 # imports for training
-import lightning as pl
+from sklearn import preprocessing as skprepro
+import pytorch_lightning as pl
 import pytorch_lightning.callbacks as plcb
 import pandas as pd
 import pytorch_forecasting as pyforecast
+import torch
 
+class NewsEmbeddings(pyforecast.models.nn.MultiEmbedding):
+    def __init__(self, *args, **kwargs):
+        self.embedding_weights = kwargs.pop('embedding_weights')
+        super().__init__(*args, **kwargs)
+
+    def init_embeddings(self):
+        self.embeddings = torch.nn.ModuleDict()
+        for name in self.embedding_sizes.keys():
+            if name in self.embedding_paddings:
+                padding_idx = 0
+            else:
+                padding_idx = None
+
+            if name in self.categorical_groups:  # embedding bag if related embeddings
+                self.embeddings[name] = pyforecast.models.nn.embeddings.TimeDistributedEmbeddingBag.from_pretrained(
+                    torch.tensor(self.embedding_weights[name]),
+                    padding_idx=padding_idx
+                )
+                self.embeddings[name].weight.requires_grad = False
+            else:
+                self.embeddings[name] = torch.nn.Embedding.from_pretrained(
+                    torch.tensor(self.embedding_weights[name]), 
+                    padding_idx=padding_idx,
+                )
+                self.embeddings[name].weight.requires_grad = False
+
+class NewsEncoder(pyforecast.NaNLabelEncoder):
+    def fit(self, y: pd.Series, overwrite: bool = False):
+        """
+        Fit transformer
+
+        Args:
+            y (pd.Series): input data to fit on
+            overwrite (bool): if to overwrite current mappings or if to add to it.
+
+        Returns:
+            NaNLabelEncoder: self
+        """
+        if not overwrite and hasattr(self, "classes_"):
+            offset = len(self.classes_)
+        else:
+            offset = 0
+            self.classes_ = {}
+
+        # determine new classes
+        if self.add_nan:
+            if self.is_numeric(y):
+                nan = np.nan
+            else:
+                nan = "nan"
+            self.classes_[nan] = 0
+
+        for val in np.unique(y):
+            if val not in self.classes_:
+                self.classes_[val] = int(val) + 1
+
+        self.classes_vector_ = np.array(list(self.classes_.keys()))
+        return self
 
 def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]):
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +96,21 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
         feature = [feat_type for feat_type in ['sentiment', 'embedding'] if feat_type in article_df.columns][0]
 
         article_df = article_df[['title', 'publish_date', feature]]
+        article_df = article_df.reset_index()
+        article_df['index'] = article_df['index'].astype(str)
+        article_df = article_df.rename(columns={'index': 'article_index'})
         article_df['publish_date'] = pd.to_datetime(article_df['publish_date'])
+
+        if feature == 'embedding':
+            article_df['embedding'] = article_df['embedding'].str.strip('[]').replace('\n', '').apply(lambda x: np.fromstring(x, sep=' '))
+            feature_size = len(df['embedding'].iloc[0])
+
+        elif feature == 'sentiment':
+            article_df['sentiment'] = article_df['sentiment'].apply(lambda x: np.array([x]))
+            feature_size = 1
+
+        article_embeddings = np.stack(article_df[feature].values)
+        article_embeddings = np.concatenate((np.zeros(article_embeddings[0:1,:].shape), article_embeddings), axis=0)
     
         # group articles by next trading day
         #Make the db in memory
@@ -50,6 +124,7 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
                 date,
                 open,
                 close,
+                article_index,
                 title,
                 {feature}
             from
@@ -57,14 +132,6 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
                 publish_date > last_date and publish_date <= date
             '''
         df = pd.read_sql_query(qry, conn)
-
-        if feature == 'embedding':
-            df['embedding'] = df['embedding'].str.strip('[]').replace('\n', '').apply(lambda x: np.fromstring(x, sep=' '))
-            feature_size = len(df['embedding'].iloc[0])
-
-        elif feature == 'sentiment':
-            df['sentiment'] = df['sentiment'].apply(lambda x: np.array([x]))
-            feature_size = 1
     else:
         feature = None
         feature_size = 1
@@ -72,40 +139,12 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
 
     df = df.groupby(['date', 'open', 'close']).agg(list).reset_index()
 
-    # # get targets
-    # df['target_close'] = df['close'].shift(-days_ahead)
-    # df['target_close_diff'] = df['close'].shift(-days_ahead) - df['close'].shift(1)
-    # df['target_close_dir'] = df['target_close_diff'].apply(lambda x: 1 if x >= 0 else 0)
-
-    # # day to day changes
-    # start_nulls = 2
-    # df['previous_close'] = df['close'].shift(1)
-    # df['previous_close_diff'] = df['close'].shift(1) - df['close'].shift(2)
-    # df['previous_close_dir'] = df['previous_close_diff'].apply(lambda x: 1 if x >= 0 else 0)
-    # start_nulls = 1 if target == 'price' else 2
-    
     if suffix != 'constant':
         # perform padding
         max_articles = df[df[feature] != 0][feature].apply(len).max()
-
-        def pad_features(features):
-            padded = np.zeros((max_articles, feature_size), dtype=float)
-            if features != 0:
-                for idx in range(len(features)):
-                    padded[idx,:] = features[idx][:]
-            return padded
-
-
-        def create_attention_mask(features):
-            attention_mask = np.zeros((max_articles,), dtype=int)
-            if features != 0:
-                attention_mask[:len(features)] = 1
-            return attention_mask
-
-        feature_col = f'padded_{feature}'
-        attention_col = 'attention_mask'
-        df[feature_col] = df[feature].apply(pad_features)
-        df[attention_col] = df[feature].apply(create_attention_mask)
+        article_index_cols = [f"article_{idx}" for idx in range(max_articles)]
+        article_index_df = pd.DataFrame(df['article_index'].tolist(), index=df.index, columns=article_index_cols, dtype=str).fillna("nan")
+        df = pd.concat([df, article_index_df], axis=1)
 
     dataset_size = len(df)
     train_size = int(split[0] * dataset_size)
@@ -120,7 +159,10 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
     time_idx = 'index'
     future_col = 'close'
     group_col = 'group'
+    article_index_col = 'article_index'
+    embeddings_col = feature
     df[group_col] = 'future'
+    categorical_encoders = {'article_index': NewsEncoder(add_nan=True).fit(df[article_index_cols].to_numpy().reshape(-1))}
     training = pyforecast.TimeSeriesDataSet(
         df[df[time_idx] < train_size],
         time_idx=time_idx,  # column name of time of observation
@@ -129,13 +171,16 @@ def get_datasets(commodity, suffix, days_ahead, seq_len, split=[0.7, 0.15, 0.15]
         max_encoder_length=seq_len,  # how much history to use
         max_prediction_length=days_ahead,  # how far to predict into future
         # covariates known and unknown in the future to inform prediction
-        time_varying_unknown_reals=[feature_col, attention_col],
+        time_varying_unknown_reals=[future_col],
+        time_varying_unknown_categoricals=[article_index_col],
+        variable_groups={article_index_col: article_index_cols},
+        categorical_encoders=categorical_encoders
     )
 
     # create validation dataset using the same normalization techniques as for the training dataset
     validation = pyforecast.TimeSeriesDataSet.from_dataset(training, df[df[time_idx] < train_size + val_size], min_prediction_idx=training.index.time.max() + 1, stop_randomization=True)
     testset = pyforecast.TimeSeriesDataSet.from_dataset(training, df, min_prediction_idx=validation.index.time.max() + 1, stop_randomization=True)
-    return training, validation, testset
+    return training, validation, testset, article_embeddings
 
 def get_dataloaders(training, validation, testset, batch_size):
     # convert datasets to dataloaders for training
@@ -144,25 +189,33 @@ def get_dataloaders(training, validation, testset, batch_size):
     test_dataloader = testset.to_dataloader(train=False, batch_size=batch_size, num_workers=2)
     return train_dataloader, val_dataloader, test_dataloader
 
-def get_mlp_model(training):
+def get_model(training, article_embeddings):
     # define network to train - the architecture is mostly inferred from the dataset, so that only a few hyperparameters have to be set by the user
-    mlp = pyforecast.DecoderMLP.from_dataset(
+    model = pyforecast.NHiTS.from_dataset(
         # dataset
         training,
         # architecture hyperparameters
-        hidden_size=32,
-        attention_head_size=1,
+        hidden_size=256,
+        # n_hidden_layers=1,
         dropout=0.1,
-        hidden_continuous_size=16,
         # loss metric to optimize
         loss=pyforecast.QuantileLoss(), # allows estimated error bars on predictions
         # logging frequency
         log_interval=2,
         # optimizer parameters
         learning_rate=0.03,
-        reduce_on_plateau_patience=4
+        reduce_on_plateau_patience=4,
+        embedding_sizes={'article_index': article_embeddings.shape},
+        embedding_paddings=['article_index']
     )
-    return mlp
+    model.embeddings = NewsEmbeddings(
+        embedding_sizes=model.hparams.embedding_sizes,
+        categorical_groups=model.hparams.categorical_groups,
+        embedding_paddings=model.hparams.embedding_paddings,
+        x_categoricals=model.hparams.x_categoricals,
+        embedding_weights={'article_index': article_embeddings}
+    )
+    return model
 
 def get_constant_model(training):
     return pyforecast.Baseline.from_dataset(training)
@@ -179,7 +232,7 @@ def get_trainer(model, train_dataloader, val_dataloader, checkpoint_path, checkp
     )
 
     # find the optimal learning rate
-    res = trainer.lr_find(
+    res = trainer.tuner.lr_find(
         model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader, early_stop_threshold=1000.0, max_lr=0.3,
     )
     return trainer
@@ -199,10 +252,10 @@ def test(trainer, model, test_dataloader):
     acc = metric.loss(predictions, actuals)
 
 def main(args):
-    training, validation, testset = get_datasets(args.commodity, args.suffix, args.days_ahead, args.seq_len, args.target)
+    training, validation, testset, article_embeddings = get_datasets(args.commodity, args.suffix, args.days_ahead, args.seq_len, args.target)
     train_dataloader, val_dataloader, test_dataloader = get_dataloaders(training, validation, testset, args.batch_size)
 
-    model = get_model(training)
+    model = get_model(training, article_embeddings)
     trainer = get_trainer(model, train_dataloader, val_dataloader)
     train(trainer, model, train_dataloader, val_dataloader)
     test(trainer, model, test_dataloader)

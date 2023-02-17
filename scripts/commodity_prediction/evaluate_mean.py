@@ -74,7 +74,7 @@ def do_runs(commodity, days_ahead, model_checkpoints_dir, num_runs, suffix, batc
     this_num_runs -= len(accuracies)
 
     if this_num_runs > 0:
-        train_data, val_data, test_data = forecasting.get_datasets(commodity, suffix, days_ahead, seq_len)
+        train_data, val_data, test_data, article_embeddings = forecasting.get_datasets(commodity, suffix, days_ahead, seq_len)
         train_dataloader, val_dataloader, test_dataloader = forecasting.get_dataloaders(train_data, val_data, test_data, batch_size)
 
     for _ in range(this_num_runs):
@@ -87,7 +87,7 @@ def do_runs(commodity, days_ahead, model_checkpoints_dir, num_runs, suffix, batc
         if suffix == 'constant':
             model = forecasting.get_constant_model(train_data)
         else:
-            model = forecasting.get_mlp_model(train_data)
+            model = forecasting.get_model(train_data, article_embeddings)
 
         trainer = forecasting.get_trainer(model, train_dataloader, val_dataloader, model_checkpoints_dir, model_checkpoint_filename)
 
@@ -152,6 +152,7 @@ def main(args):
 
         days_ahead = 30
         commodities = [
+            'soybean',
             'crude_oil',
             'brent_crude_oil',
             'natural_gas',
@@ -163,7 +164,6 @@ def main(args):
             'silver',
             'corn',
             'cotton',
-            'soybean',
             'sugar',
             'wheat'
         ]
