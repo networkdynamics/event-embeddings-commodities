@@ -2,9 +2,9 @@ import os
 import re
 
 import nltk
-from NewsSentiment import TargetSentimentClassifier
 import pandas as pd
 from tqdm import tqdm
+import transformers
 
 COMMODITIES = {
     'brent_crude_oil': ['oil', 'crude', 'brent'],
@@ -35,6 +35,7 @@ COMMODITIES = {
 
 class CommoditySentiment:
     def __init__(self, commodity):
+        from NewsSentiment import TargetSentimentClassifier
         self.sentiment_classifier = TargetSentimentClassifier()
         self.commodity = commodity
 
@@ -77,6 +78,22 @@ class CommoditySentiment:
         prob_positive = [sentiment_class for sentiment_class in sentiment if sentiment_class['class_label'] == 'positive'][0]['class_prob']
         return prob_positive
 
+class FinancialSentiment:
+    def __init__(self):
+
+        finbert = transformers.BertForSequenceClassification.from_pretrained('yiyanghkust/finbert-tone',num_labels=3)
+        tokenizer = transformers.BertTokenizer.from_pretrained('yiyanghkust/finbert-tone')
+
+        self.classifier = transformers.pipeline("sentiment-analysis", model=finbert, tokenizer=tokenizer, device=0, return_all_scores=True)
+
+    def get_sentiment(self, txt):
+        tokenizer_kwargs = {'padding':True,'truncation':True,'max_length':512}
+
+        results = self.classifier(txt, **tokenizer_kwargs)
+        prob_positive = [sentiment_class for sentiment_class in results[0] if sentiment_class['label'] == 'Positive'][0]['score']
+        return prob_positive
+
+
 def main():
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -87,18 +104,26 @@ def main():
 
     tqdm.pandas()
 
+    classifier_type = 'financial'
+
     for commodity in COMMODITIES:
         csv_path = os.path.join(data_path, 'commodity_data', f"{commodity}_articles.csv")
         
-        classifier = CommoditySentiment(commodity)
+        if classifier_type == 'targeted':
+            classifier = CommoditySentiment(commodity)
+            suffix = 'sentiment'
+        elif classifier_type == 'financial':
+            classifier = FinancialSentiment()
+            suffix = 'fsentiment'
 
         articles_df = pd.read_csv(csv_path)
 
         articles_df['all_text'] = articles_df[['title', 'text']].agg('. '.join, axis=1)
         articles_df['sentiment'] = articles_df['all_text'].progress_apply(classifier.get_sentiment)
         articles_df = articles_df[articles_df['sentiment'].notnull()]
+        articles_df = articles_df.drop(columns=['all_text'])
 
-        out_path = os.path.join(data_path, 'commodity_data', f"{commodity}_sentiment.csv")
+        out_path = os.path.join(data_path, 'commodity_data', f"{commodity}_{suffix}.csv")
         articles_df.to_csv(out_path)
 
 
