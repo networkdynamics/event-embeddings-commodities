@@ -115,6 +115,8 @@ def main(args):
 
     if args.method == 'sentiment':
         suffix = 'sentiment'
+    elif args.method == 'fsentiment':
+        suffix = 'fsentiment'
     elif args.method == 'news2vec':
         suffix = '0521_news2vec_embeds'
     elif args.method == 'lm_embed':

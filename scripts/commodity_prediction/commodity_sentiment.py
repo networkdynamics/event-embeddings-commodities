@@ -17,17 +17,7 @@ COMMODITIES = {
     'gold': ['gold'],
     'silver': ['silver'],
     'corn': ['corn'],
-    'oat': ['oat', 'oats'],
     'cotton': ['cotton'],
-    'lumber': ['lumber'],
-    'cocoa': ['cocoa'],
-    'coffee': ['coffee'],
-    'feeder_cattle': ['cattle'],
-    'heating_oil': ['oil', 'heating'],
-    'lean_hogs': ['hogs'],
-    'live_cattle': ['cattle'],
-    'soybean_meal': ['soybean', 'soybeans'],
-    'soybean_oil': ['soybean', 'soybeans'],
     'soybean': ['soybean', 'soybeans'],
     'sugar': ['sugar'],
     'wheat': ['wheat']
@@ -107,14 +97,18 @@ def main():
     classifier_type = 'financial'
 
     for commodity in COMMODITIES:
-        csv_path = os.path.join(data_path, 'commodity_data', f"{commodity}_articles.csv")
-        
         if classifier_type == 'targeted':
             classifier = CommoditySentiment(commodity)
             suffix = 'sentiment'
         elif classifier_type == 'financial':
             classifier = FinancialSentiment()
             suffix = 'fsentiment'
+
+        csv_path = os.path.join(data_path, 'commodity_data', f"{commodity}_articles.csv")
+        out_path = os.path.join(data_path, 'commodity_data', f"{commodity}_{suffix}.csv")
+
+        if os.path.exists(out_path):
+            continue
 
         articles_df = pd.read_csv(csv_path)
 
@@ -123,7 +117,6 @@ def main():
         articles_df = articles_df[articles_df['sentiment'].notnull()]
         articles_df = articles_df.drop(columns=['all_text'])
 
-        out_path = os.path.join(data_path, 'commodity_data', f"{commodity}_{suffix}.csv")
         articles_df.to_csv(out_path)
 
 
