@@ -4,3 +4,4 @@ checkpoints
 figs
 secrets.txt
 __pycache__
+*.ckpt
