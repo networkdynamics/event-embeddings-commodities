@@ -138,7 +138,7 @@ def main(args):
         'wheat'
     ]
 
-    feature_type = 'sentiment' if suffix == 'sentiment' else 'embedding'
+    feature_type = 'sentiment' if 'sentiment' in suffix else 'embedding'
 
     # optimize hyperparameters
     if args.method == 'LSTM':

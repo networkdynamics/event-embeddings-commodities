@@ -9,7 +9,7 @@ def main():
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data', 'results', 'commodity')
 
     model = 'LSTM'
-    suffix = 'lm_32_embed'
+    suffix = 'fsentiment'
 
     all_results = {}
 
