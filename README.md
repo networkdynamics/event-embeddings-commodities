@@ -1,3 +1,2 @@
-# State of Political Evolution
+# Evaluating Event Embeddings on Commodities Futures Prices
 
-Exploring the state of the art in event evolution, and applying to political events
